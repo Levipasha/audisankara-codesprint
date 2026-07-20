@@ -171,14 +171,12 @@ function RegisterForm() {
       .then(data => setColleges(data))
       .catch(console.error);
 
-    // Prefill unique incremental team code from public teams count
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/public/teams')
+    // Prefill unique incremental team code from backend
+    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/public/generate-team-code')
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          const count = data.length;
-          const code = `CS2026-${String(count + 1).padStart(3, '0')}`;
-          setTeamCode(code);
+        if (data && data.success && data.code) {
+          setTeamCode(data.code);
         } else {
           setTeamCode('CS2026-001');
         }
