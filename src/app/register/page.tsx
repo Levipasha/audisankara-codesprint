@@ -236,18 +236,43 @@ function RegisterForm() {
 
 
 
-  // Check duplicate phone numbers in the database
-  const checkPhoneDuplicate = async (phone: string) => {
+  // Check duplicate phone numbers in the database and local team list
+  const checkPhoneDuplicate = async (phone: string, currentFieldId?: string) => {
     if (phone.length === 10) {
+      const cleanPhone = phone.trim();
+      
+      // Local Check: Leader vs Members
+      if (currentFieldId === 'phone') {
+        if (addedMembers.some(m => m.phone.trim() === cleanPhone)) {
+          setDuplicatePhones(prev => ({ ...prev, [phone]: true }));
+          setErrorMsg('This phone number is already used by an added team member.');
+          return true;
+        }
+      }
+      if (currentFieldId === 'm_phone') {
+        if (leaderDetails.phone.trim() === cleanPhone) {
+          setDuplicatePhones(prev => ({ ...prev, [phone]: true }));
+          setErrorMsg('Member phone number cannot match the Team Leader.');
+          return true;
+        }
+        if (addedMembers.some(m => m.phone.trim() === cleanPhone)) {
+          setDuplicatePhones(prev => ({ ...prev, [phone]: true }));
+          setErrorMsg('A member with this phone number is already added.');
+          return true;
+        }
+      }
+
       try {
         const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/users/check-duplicate?phone=' + phone);
         if (res.ok) {
           const data = await res.json();
           if (data.exists) {
             setDuplicatePhones(prev => ({ ...prev, [phone]: true }));
+            setErrorMsg(data.message);
             return true;
           } else {
             setDuplicatePhones(prev => { const next = { ...prev }; delete next[phone]; return next; });
+            setErrorMsg(prev => (prev.includes('phone') || prev.includes('Phone')) ? '' : prev);
           }
         }
       } catch (err) {
@@ -257,44 +282,92 @@ function RegisterForm() {
     return false;
   };
 
-  // Check duplicate emails — triggers when email looks complete (ends with .com/.in/.org etc.)
-  const checkEmailDuplicate = async (email: string) => {
+  // Check duplicate emails — triggers when email looks complete
+  const checkEmailDuplicate = async (email: string, currentFieldId?: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (emailRegex.test(email)) {
+      const cleanEmail = email.toLowerCase().trim();
+
+      // Local Check: Leader vs Members
+      if (currentFieldId === 'email') {
+        if (addedMembers.some(m => m.email.toLowerCase().trim() === cleanEmail)) {
+          setDuplicateEmails(prev => ({ ...prev, [cleanEmail]: true }));
+          setErrorMsg('This email is already used by an added team member.');
+          return true;
+        }
+      }
+      if (currentFieldId === 'm_email') {
+        if (leaderDetails.email.toLowerCase().trim() === cleanEmail) {
+          setDuplicateEmails(prev => ({ ...prev, [cleanEmail]: true }));
+          setErrorMsg('Member email cannot match the Team Leader.');
+          return true;
+        }
+        if (addedMembers.some(m => m.email.toLowerCase().trim() === cleanEmail)) {
+          setDuplicateEmails(prev => ({ ...prev, [cleanEmail]: true }));
+          setErrorMsg('A member with this email is already added.');
+          return true;
+        }
+      }
+
       try {
         const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/users/check-duplicate?email=' + encodeURIComponent(email));
         if (res.ok) {
           const data = await res.json();
           if (data.exists) {
-            setDuplicateEmails(prev => ({ ...prev, [email.toLowerCase()]: true }));
+            setDuplicateEmails(prev => ({ ...prev, [cleanEmail]: true }));
+            setErrorMsg(data.message);
             return true;
           } else {
-            setDuplicateEmails(prev => { const next = { ...prev }; delete next[email.toLowerCase()]; return next; });
+            setDuplicateEmails(prev => { const next = { ...prev }; delete next[cleanEmail]; return next; });
+            setErrorMsg(prev => prev.toLowerCase().includes('email') ? '' : prev);
           }
         }
       } catch (err) {
         console.error('Error checking email duplicate:', err);
       }
     } else {
-      // Clear stale warning if email is being edited
       setDuplicateEmails(prev => { const next = { ...prev }; delete next[email.toLowerCase()]; return next; });
     }
     return false;
   };
 
   // Check duplicate roll/ID numbers — triggers on blur
-  const checkRollDuplicate = async (rollNumber: string) => {
+  const checkRollDuplicate = async (rollNumber: string, currentFieldId?: string) => {
     const clean = rollNumber.trim().toUpperCase();
     if (!clean) return false;
+
+    // Local Check: Leader vs Members
+    if (currentFieldId === 'rollNumber') {
+      if (addedMembers.some(m => m.rollNumber.trim().toUpperCase() === clean)) {
+        setDuplicateRolls(prev => ({ ...prev, [clean]: true }));
+        setErrorMsg('This Roll/ID number is already used by an added team member.');
+        return true;
+      }
+    }
+    if (currentFieldId === 'm_rollNumber') {
+      if (leaderDetails.rollNumber.trim().toUpperCase() === clean) {
+        setDuplicateRolls(prev => ({ ...prev, [clean]: true }));
+        setErrorMsg('Member Roll/ID number cannot match the Team Leader.');
+        return true;
+      }
+      if (addedMembers.some(m => m.rollNumber.trim().toUpperCase() === clean)) {
+        setDuplicateRolls(prev => ({ ...prev, [clean]: true }));
+        setErrorMsg('A member with this Roll/ID number is already added.');
+        return true;
+      }
+    }
+
     try {
       const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/users/check-duplicate?rollNumber=' + encodeURIComponent(clean));
       if (res.ok) {
         const data = await res.json();
         if (data.exists) {
           setDuplicateRolls(prev => ({ ...prev, [clean]: true }));
+          setErrorMsg(data.message);
           return true;
         } else {
           setDuplicateRolls(prev => { const next = { ...prev }; delete next[clean]; return next; });
+          setErrorMsg(prev => (prev.includes('Roll') || prev.includes('ID')) ? '' : prev);
         }
       }
     } catch (err) {
@@ -309,13 +382,13 @@ function RegisterForm() {
     if (e.target.id === 'phone') {
       value = value.replace(/\D/g, '').slice(0, 10);
       if (value.length === 10) {
-        checkPhoneDuplicate(value);
+        checkPhoneDuplicate(value, 'phone');
       } else {
         setDuplicatePhones(prev => { const next = { ...prev }; const old = leaderDetails.phone; if (old) delete next[old]; return next; });
       }
     }
     if (e.target.id === 'email') {
-      checkEmailDuplicate(value);
+      checkEmailDuplicate(value, 'email');
     }
     setLeaderDetails(prev => ({ ...prev, [e.target.id]: value }));
   };
@@ -326,13 +399,13 @@ function RegisterForm() {
     if (e.target.id === 'phone') {
       value = value.replace(/\D/g, '').slice(0, 10);
       if (value.length === 10) {
-        checkPhoneDuplicate(value);
+        checkPhoneDuplicate(value, 'phone');
       } else {
         setDuplicatePhones(prev => { const next = { ...prev }; const old = individualDetails.phone; if (old) delete next[old]; return next; });
       }
     }
     if (e.target.id === 'email') {
-      checkEmailDuplicate(value);
+      checkEmailDuplicate(value, 'email');
     }
     setIndividualDetails(prev => ({ ...prev, [e.target.id]: value }));
   };
@@ -343,13 +416,13 @@ function RegisterForm() {
     if (e.target.id === 'm_phone') {
       value = value.replace(/\D/g, '').slice(0, 10);
       if (value.length === 10) {
-        checkPhoneDuplicate(value);
+        checkPhoneDuplicate(value, 'm_phone');
       } else {
         setDuplicatePhones(prev => { const next = { ...prev }; const old = memberForm.phone; if (old) delete next[old]; return next; });
       }
     }
     if (e.target.id === 'm_email') {
-      checkEmailDuplicate(value);
+      checkEmailDuplicate(value, 'm_email');
     }
     const fieldId = e.target.id.replace('m_', '');
     setMemberForm(prev => ({ ...prev, [fieldId]: value }));
