@@ -132,7 +132,13 @@ body {
 .animate-marquee-scroll {
   display: flex;
   width: max-content;
-  animation: marquee-scroll 650s linear infinite;
+  animation: marquee-scroll 1000s linear infinite;
+}
+
+@media (min-width: 768px) {
+  .animate-marquee-scroll {
+    animation-duration: 750s;
+  }
 }
 
 .animate-marquee-scroll:hover {
