@@ -19,7 +19,7 @@ export default function LoginPage() {
     const queryToken = params.get('token');
     if (queryToken) {
       setLoading(true);
-      fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/auth/me', {
+      fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/auth/me', {
         headers: { Authorization: `Bearer ${queryToken}` }
       })
       .then(res => res.json())

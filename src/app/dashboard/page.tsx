@@ -4,8 +4,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { LayoutDashboard, Users, Ticket, Award, Calendar, Sparkles, CheckCircle2, ShieldAlert, Copy, ExternalLink, Plus, UserPlus, LogOut, Check, X, Shield, Download, Bell, HelpCircle, School, Loader, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, Ticket, Award, Calendar, Sparkles, CheckCircle2, ShieldAlert, Copy, ExternalLink, Plus, UserPlus, LogOut, Check, X, Shield, Download, Bell, HelpCircle, School, Loader, Trash2, CreditCard } from 'lucide-react';
 import QRCode from 'qrcode';
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function UserDashboard() {
   const router = useRouter();
@@ -128,73 +143,11 @@ export default function UserDashboard() {
   const [sessionMembers, setSessionMembers] = useState<any[]>([]);
   const [addMemberStep, setAddMemberStep] = useState<'input' | 'pay' | 'utr'>('input');
   const [printingTxId, setPrintingTxId] = useState<string | null>(null);
+  const [dashUtrLoading, setDashUtrLoading] = useState(false);
+  const [dashUtrError, setDashUtrError] = useState('');
+  const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
 
-  const getDirectRazorpayUrl = (slotsCount: number) => {
-    if (!user) return '';
-    const baseUrl = "https://axisbpayments.razorpay.com/pl_OluX2aezURAvVF/view";
-    const params = new URLSearchParams();
-    
-    const studentName = (user.name || '').trim();
-    const rollNumber = (user.rollNumber || '').replace(/\s+/g, '').trim();
-    const yearValue = (user.year || '1st Year').replace(/\s+/g, '').trim();
-    const college = (user.college || '').trim();
-    const course = (user.branch || (user as any).course || '').trim();
 
-    let phoneVal = (user.phone || '').trim();
-    if (/^\d{10}$/.test(phoneVal)) {
-      phoneVal = `91${phoneVal}`;
-    } else if (/^91\d{10}$/.test(phoneVal)) {
-      // already has 91 prefix, keep as is
-    }
-
-    params.set("email", user.email || '');
-    params.set("phone", phoneVal);
-    params.set("contact", phoneVal);
-    params.set("name", studentName);
-
-    params.set("prefill[email]", user.email || '');
-    params.set("prefill[phone]", phoneVal);
-    params.set("prefill[contact]", phoneVal);
-    params.set("prefill[name]", studentName);
-
-    params.set("student_name", studentName);
-    params.set("prefill[student_name]", studentName);
-    params.set("STUDENT NAME", studentName);
-    params.set("prefill[STUDENT NAME]", studentName);
-
-    params.set("roll_number", rollNumber);
-    params.set("prefill[roll_number]", rollNumber);
-    params.set("ROLL NUMBER", rollNumber);
-    params.set("prefill[ROLL NUMBER]", rollNumber);
-
-    params.set("college", college);
-    params.set("prefill[college]", college);
-    params.set("COLLEGE", college);
-    params.set("prefill[COLLEGE]", college);
-
-    params.set("course", course);
-    params.set("prefill[course]", course);
-    params.set("COURSE", course);
-    params.set("prefill[COURSE]", course);
-
-    params.set("year", yearValue);
-    params.set("prefill[year]", yearValue);
-    params.set("YEAR", yearValue);
-    params.set("prefill[YEAR]", yearValue);
-
-    params.set("hackthon_fees", "REGISTRATION FEES");
-    params.set("prefill[hackthon_fees]", "REGISTRATION FEES");
-    params.set("HACKTHON FEES", "REGISTRATION FEES");
-    params.set("prefill[HACKTHON FEES]", "REGISTRATION FEES");
-
-    const finalPriceVal = (399 * slotsCount).toString();
-    params.set("amount", finalPriceVal);
-    params.set("prefill[amount]", finalPriceVal);
-    params.set("AMOUNT", finalPriceVal);
-    params.set("prefill[AMOUNT]", finalPriceVal);
-
-    return `${baseUrl}?${params.toString().replace(/%5B/g, '[').replace(/%5D/g, ']')}`;
-  };
 
   const getPaymentRecords = () => {
     if (!teamDetails?.members) return [];
@@ -239,44 +192,187 @@ export default function UserDashboard() {
     return Object.values(groups);
   };
 
-  // UTR Submission handler (for pending-payment users on dashboard)
-  const [dashUtr, setDashUtr] = useState('');
-  const [dashUtrLoading, setDashUtrLoading] = useState(false);
-  const [dashUtrError, setDashUtrError] = useState('');
-  const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
-
-  const handleDashUtrSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dashUtr.trim() || dashUtr.trim().length < 12) return;
+  // Razorpay Checkout handler for dashboard payments
+  const handleDashboardPayment = async () => {
     setDashUtrLoading(true);
     setDashUtrError('');
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/submit-utr', {
+      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ utr: dashUtr.trim() })
+        body: JSON.stringify({})
       });
-      const data = await res.json();
-      if (res.ok) {
-        setDashUtrSuccess(true);
-        await refreshUser();
-      } else {
-        setDashUtrError(data.message || 'Failed to submit UTR.');
+
+      if (!orderRes.ok) {
+        const errData = await orderRes.json();
+        setDashUtrError(errData.message || 'Failed to create payment order.');
+        setDashUtrLoading(false);
+        return;
       }
-    } catch {
-      setDashUtrError('Network error. Please try again.');
-    } finally {
+
+      const orderData = await orderRes.json();
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        setDashUtrError('Failed to load Razorpay SDK. Please check your internet connection.');
+        setDashUtrLoading(false);
+        return;
+      }
+
+      const keyId = orderData.keyId || '';
+
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'CodeSprint 2026',
+        description: 'Hackathon Registration Fee',
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          setDashUtrLoading(true);
+          setDashUtrError('');
+          try {
+            const verifyRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: orderData.amount / 100
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              setDashUtrSuccess(true);
+              await refreshUser();
+            } else {
+              setDashUtrError(verifyData.message || 'Payment verification failed.');
+            }
+          } catch (err) {
+            console.error(err);
+            setDashUtrError('Error verifying payment signature.');
+          } finally {
+            setDashUtrLoading(false);
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: '#6d28d9'
+        },
+        modal: {
+          ondismiss: function () {
+            setDashUtrLoading(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      setDashUtrError('Failed to initiate checkout.');
       setDashUtrLoading(false);
     }
   };
 
-  const handleAddMemberSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (sessionMembers.length === 0 || !addMemberForm.utr.trim()) {
-      setAddMemberError('Please add at least one member and provide a UTR number.');
+  // Razorpay Checkout handler for adding unpaid team members
+  const handleTeamCheckout = async () => {
+    try {
+      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!orderRes.ok) {
+        const errData = await orderRes.json();
+        addToast('Error', errData.message || 'Failed to create payment order.', 'warning');
+        return;
+      }
+
+      const orderData = await orderRes.json();
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        addToast('Error', 'Failed to load Razorpay SDK. Please check your internet connection.', 'warning');
+        return;
+      }
+
+      const keyId = orderData.keyId || '';
+
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'CodeSprint 2026',
+        description: 'Team Registration Payment',
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: orderData.amount / 100
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              addToast('Success', 'Payment verified successfully! Team members activated.', 'success');
+              fetchMyTeam();
+              refreshUser();
+            } else {
+              addToast('Error', verifyData.message || 'Payment verification failed.', 'warning');
+            }
+          } catch (err) {
+            console.error(err);
+            addToast('Error', 'Error verifying signature.', 'warning');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: '#6d28d9'
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      addToast('Error', 'Failed to initiate checkout.', 'warning');
+    }
+  };
+
+  const handleAddMemberSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (sessionMembers.length === 0) {
+      setAddMemberError('Please add at least one member.');
       return;
     }
 
@@ -290,13 +386,12 @@ export default function UserDashboard() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          members: sessionMembers,
-          utr: addMemberForm.utr.trim()
+          members: sessionMembers
         })
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        addToast('Success', 'Member request submitted successfully! Pending admin approval.', 'success');
+        addToast('Success', 'Teammate(s) added successfully!', 'success');
         setShowAddMemberModal(false);
         setAddMemberForm({
           name: '',
@@ -669,56 +764,27 @@ export default function UserDashboard() {
                 </div>
                 <h1 className="text-xl font-extrabold text-slate-900">Complete Your Payment</h1>
                 <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-                  Pay <strong>₹399</strong> via Razorpay to activate your account, then come back here and enter your UTR number to confirm.
+                  Pay <strong>₹399</strong> securely online using UPI, Card, Netbanking, or Wallets to activate your account.
                 </p>
               </div>
             )}
 
             {/* Pay via Razorpay button — shown for pending and rejected */}
             {(user.paymentStatus === 'pending' || user.paymentStatus === 'rejected') && !dashUtrSuccess && (
-              <div className="mb-5 text-center">
-                <a
-                  href={getDirectRazorpayUrl(1)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all w-full"
+              <div className="space-y-4 pt-2 text-center">
+                <button
+                  onClick={handleDashboardPayment}
+                  disabled={dashUtrLoading}
+                  className="inline-flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all w-full cursor-pointer"
                 >
-                  <span>Pay ₹399 via Razorpay</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-                <p className="text-[10px] text-slate-400 mt-2">You'll be redirected to the secure Axis Bank payment page.</p>
-              </div>
-            )}
-
-            {/* UTR form — shown for pending and rejected (after paying) */}
-            {(user.paymentStatus === 'pending' || user.paymentStatus === 'rejected') && !dashUtrSuccess && (
-              <form onSubmit={handleDashUtrSubmit} className="space-y-4 border-t border-slate-100 pt-5">
-                <div>
-                  <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest pl-1 mb-1.5">
-                    UTR / Transaction Reference Number
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={16}
-                    placeholder="Enter 12-digit UTR reference number"
-                    value={dashUtr}
-                    onChange={e => setDashUtr(e.target.value.replace(/\s+/g, ''))}
-                    className="block w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono"
-                  />
-                  <p className="text-[10px] text-slate-400 pl-1 mt-1.5">Find this in your Razorpay/bank payment SMS or email confirmation.</p>
-                </div>
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>{dashUtrLoading ? 'Processing...' : 'Pay ₹399 Online Now'}</span>
+                </button>
                 {dashUtrError && (
                   <p className="text-rose-500 text-xs pl-1">{dashUtrError}</p>
                 )}
-                <button
-                  type="submit"
-                  disabled={dashUtrLoading || dashUtr.trim().length < 12}
-                  className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
-                >
-                  {dashUtrLoading ? 'Submitting...' : 'Submit UTR & Request Verification'}
-                </button>
-              </form>
+                <p className="text-[10px] text-slate-400 mt-2">Secured by Razorpay Payment Gateway.</p>
+              </div>
             )}
 
             {/* Logout link */}
@@ -1112,6 +1178,28 @@ export default function UserDashboard() {
                       </div>
                     </div>
                   )}
+                  {/* Pending Team Checkout Banner */}
+                  {user.id === teamDetails?.leaderId && teamDetails?.members?.some((m: any) => m.paymentStatus !== 'paid') && (
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm mb-6">
+                      <div className="text-left">
+                        <h4 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                          <CreditCard className="h-4.5 w-4.5 text-purple-650" />
+                          Pending Team Checkout
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                          Your team has <strong>{teamDetails.members.filter((m: any) => m.paymentStatus !== 'paid').length} unpaid member(s)</strong>. Complete payment to activate their accounts.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleTeamCheckout}
+                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer flex-shrink-0 active:scale-[0.98]"
+                      >
+                        <span>Pay ₹{teamDetails.members.filter((m: any) => m.paymentStatus !== 'paid').length * 399} Online</span>
+                      </button>
+                    </div>
+                  )}
+
                   {/* Team Members List */}
                   <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
                     <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
@@ -1173,7 +1261,11 @@ export default function UserDashboard() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                               {member.paymentStatus === 'submitted' ? (
+                                {member.paymentStatus === 'pending' ? (
+                                  <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold">
+                                    Unpaid / Pending Checkout
+                                  </span>
+                               ) : member.paymentStatus === 'submitted' ? (
                                  <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-250 px-2 py-0.5 rounded-full font-bold animate-pulse">
                                    Pending Admin Approval
                                  </span>
@@ -1672,13 +1764,16 @@ export default function UserDashboard() {
                       {sessionMembers.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setAddMemberError('');
-                            setAddMemberStep('pay');
-                          }}
-                          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
+                          onClick={() => handleAddMemberSubmit()}
+                          disabled={addMemberLoading}
+                          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
                         >
-                          <span>Proceed to Payment (₹{sessionMembers.length * 399})</span>
+                          {addMemberLoading ? (
+                            <Loader className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          <span>Save & Add Teammates</span>
                         </button>
                       )}
                       <button
@@ -1766,81 +1861,12 @@ export default function UserDashboard() {
                   </div>
                 ) : (
                   <div className="p-4 text-center border border-slate-200 bg-slate-50 text-slate-500 rounded-xl text-xs font-semibold">
-                    Team capacity reached (5 total members added). Remove a teammate from the session list to add another, or proceed to payment.
+                    Team capacity reached (5 total members added). Remove a teammate from the session list to add another.
                   </div>
                 )}
               </div>
             )}
 
-            {addMemberStep === 'pay' && (
-              <div className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 text-left flex justify-between items-center text-xs font-bold text-slate-800">
-                  <span>Total Registration Amount ({sessionMembers.length} member(s))</span>
-                  <span className="text-purple-700 font-mono">₹{sessionMembers.length * 399}</span>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      window.open(getDirectRazorpayUrl(sessionMembers.length), '_blank');
-                      setAddMemberStep('utr');
-                    }}
-                    className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <span>Pay ₹{sessionMembers.length * 399}</span>
-                  </button>
-                  <p className="text-[9px] text-slate-500 text-center leading-normal mt-2">
-                    Click the button above to pay securely. After paying, you will enter the transaction UTR number.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setAddMemberStep('input')}
-                  className="w-full text-center text-[10px] text-purple-655 hover:underline font-bold mt-1"
-                >
-                  Edit Teammate Details
-                </button>
-              </div>
-            )}
-
-            {addMemberStep === 'utr' && (
-              <form onSubmit={handleAddMemberSubmit} className="space-y-4">
-                <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 text-left flex justify-between items-center text-xs font-bold text-slate-800">
-                  <span>Total Amount Paid</span>
-                  <span className="text-emerald-700 font-mono">₹{sessionMembers.length * 399}</span>
-                </div>
-
-                <div>
-                  <label htmlFor="memberUtr" className="block text-[10px] font-bold text-slate-655 mb-1 uppercase pl-0.5">Transaction UTR / Txn ID</label>
-                  <input
-                    id="memberUtr"
-                    type="text"
-                    required
-                    placeholder="Enter 12-digit transaction UTR"
-                    value={addMemberForm.utr}
-                    onChange={(e) => setAddMemberForm(prev => ({ ...prev, utr: e.target.value }))}
-                    className="block w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500/50 text-xs"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={addMemberLoading || !addMemberForm.utr.trim()}
-                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
-                  >
-                    {addMemberLoading ? (
-                      <Loader className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Check className="h-3.5 w-3.5" />
-                    )}
-                    <span>Submit UTR & Add Teammate(s)</span>
-                  </button>
-                </div>
-              </form>
-            )}
           </div>
         </div>
       )}

@@ -217,7 +217,7 @@ function RegisterForm() {
   useEffect(() => {
     if (user && user.role === 'team-leader' && user.teamId) {
       const activeToken = localStorage.getItem('codesprint_token');
-      fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/teams/my-team', {
+      fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/teams/my-team', {
         headers: {
           Authorization: `Bearer ${activeToken}`
         }
@@ -609,56 +609,30 @@ function RegisterForm() {
         branch: leaderDetails.branch === 'Other' ? customLeaderBranch.trim() : leaderDetails.branch
       };
 
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/teams/register-team-flow', {
+      // Generate Razorpay order on the backend publicly
+      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          registrationType: 'TEAM',
+          quantity: totalMembers
+        })
+      });
+
+      const orderData = await orderRes.json();
+      if (orderRes.ok) {
+        setCreatedOrder(orderData);
+        
+        const registrationDetails = {
           teamName: teamName.trim(),
           teamCode: teamCode.trim(),
           leader: leaderPayload,
           members: addedMembers,
           teamStatus: availabilityMode,
           availableSlots: availabilityMode === 'OPEN' ? selectedAvailableSlots : 0
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMsg(data.message || 'Registration failed.');
-        setLoading(false);
-        return;
-      }
-
-      // Login the leader session
-      if (data.token && data.user) {
-        login(data.token, data.user);
-      }
-
-      // Generate Razorpay order on the backend
-      const activeToken = data.token || localStorage.getItem('codesprint_token');
-      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${activeToken}`
-        },
-        body: JSON.stringify({})
-      });
-
-      const orderData = await orderRes.json();
-      if (orderRes.ok) {
-        setCreatedOrder(orderData);
-        // Switch view to UTR input
-        setPaymentStep('utr-input');
-        
-        // Open direct Razorpay payment URL in a new tab
-        const leaderPayload = {
-          ...leaderDetails,
-          college: leaderDetails.college.trim(),
-          branch: leaderDetails.branch === 'Other' ? customLeaderBranch.trim() : leaderDetails.branch
         };
-        const razorpayUrl = getDirectRazorpayUrl(leaderPayload);
-        window.open(razorpayUrl, '_blank');
+
+        await handleRazorpayRegistrationPayment(orderData, leaderPayload, 'TEAM', registrationDetails);
       } else {
         setErrorMsg(orderData.message || 'Failed to create payment order.');
       }
@@ -691,56 +665,45 @@ function RegisterForm() {
 
     setLoading(true);
     try {
+      const individualPayload = {
+        ...individualDetails,
+        college: individualDetails.college.trim(),
+        branch: individualDetails.branch === 'Other' ? customIndividualBranch.trim() : individualDetails.branch,
+        registrationType: 'INDIVIDUAL'
+      };
+
       const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/auth/otp-verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...individualDetails,
-          college: individualDetails.college.trim(),
-          branch: individualDetails.branch === 'Other' ? customIndividualBranch.trim() : individualDetails.branch,
-          registrationType: 'INDIVIDUAL',
-          code: '123456' // Mock OTP bypass
+          ...individualPayload
         })
       });
 
       const data = await res.json();
-      if (!res.ok && res.status !== 202) {
-        setErrorMsg(data.message || 'OTP Verification failed.');
+      if (!res.ok) {
+        setErrorMsg(data.message || 'Details verification failed.');
         setLoading(false);
         return;
       }
 
-      if (data.token && data.user) {
-        login(data.token, data.user);
-      }
-
-      // Generate payment order
-      const activeToken = data.token || localStorage.getItem('codesprint_token');
-      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
+      // Generate payment order publicly
+      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${activeToken}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({})
+        body: JSON.stringify({
+          registrationType: 'INDIVIDUAL',
+          quantity: 1
+        })
       });
 
       const orderData = await orderRes.json();
       if (orderRes.ok) {
         setCreatedOrder(orderData);
-        // Build Razorpay URL with current individual details and redirect directly
-        const finalIndividual = {
-          ...individualDetails,
-          college: individualDetails.college.trim(),
-          branch: individualDetails.branch === 'Other' ? customIndividualBranch.trim() : individualDetails.branch,
-        };
-        const razorpayUrl = getDirectRazorpayUrl(finalIndividual);
-        // Persist state so we restore UTR step on return
-        sessionStorage.setItem('cs_individual_details', JSON.stringify(finalIndividual));
-        sessionStorage.setItem('cs_reg_mode', 'JOIN');
         setJoinStep(2);
-        // Open Razorpay in a new tab so user can return to enter UTR
-        window.open(razorpayUrl, '_blank');
+        await handleRazorpayRegistrationPayment(orderData, individualPayload, 'INDIVIDUAL', individualPayload);
       } else {
         setErrorMsg(orderData.message || 'Failed to create payment order.');
       }
@@ -874,60 +837,7 @@ function RegisterForm() {
     }
   };
 
-  const getDirectRazorpayUrl = (u: any) => {
-    const baseUrl = "https://axisbpayments.razorpay.com/pl_OluX2aezURAvVF/view";
-    const params = new URLSearchParams();
-    
-    const studentName = u.name || '';
-    const rollNumber = (u.rollNumber || '').replace(/\s+/g, '').trim();
-    const yearValue = (u.year || '1st Year').replace(/\s+/g, '').trim();
-    const college = u.college || '';
-    const course = u.branch || '';
 
-    let phoneVal = u.phone || '';
-    if (/^\d{10}$/.test(phoneVal)) phoneVal = `91${phoneVal}`;
-
-    params.set("email", u.email);
-    params.set("phone", phoneVal);
-    params.set("contact", phoneVal);
-    params.set("name", studentName);
-    params.set("prefill[email]", u.email);
-    params.set("prefill[phone]", phoneVal);
-    params.set("prefill[contact]", phoneVal);
-    params.set("prefill[name]", studentName);
-    params.set("student_name", studentName);
-    params.set("prefill[student_name]", studentName);
-    params.set("STUDENT NAME", studentName);
-    params.set("prefill[STUDENT NAME]", studentName);
-    params.set("roll_number", rollNumber);
-    params.set("prefill[roll_number]", rollNumber);
-    params.set("ROLL NUMBER", rollNumber);
-    params.set("prefill[ROLL NUMBER]", rollNumber);
-    params.set("college", college);
-    params.set("prefill[college]", college);
-    params.set("COLLEGE", college);
-    params.set("prefill[COLLEGE]", college);
-    params.set("course", course);
-    params.set("prefill[course]", course);
-    params.set("COURSE", course);
-    params.set("prefill[COURSE]", course);
-    params.set("year", yearValue);
-    params.set("prefill[year]", yearValue);
-    params.set("YEAR", yearValue);
-    params.set("prefill[YEAR]", yearValue);
-    params.set("hackthon_fees", "REGISTRATION FEES");
-    params.set("prefill[hackthon_fees]", "REGISTRATION FEES");
-    params.set("HACKTHON FEES", "REGISTRATION FEES");
-    params.set("prefill[HACKTHON FEES]", "REGISTRATION FEES");
-
-    const priceVal = String(getFinalPrice());
-    params.set("amount", priceVal);
-    params.set("prefill[amount]", priceVal);
-    params.set("AMOUNT", priceVal);
-    params.set("prefill[AMOUNT]", priceVal);
-
-    return `${baseUrl}?${params.toString().replace(/%5B/g, '[').replace(/%5D/g, ']')}`;
-  };
 
   const getActiveUserDetails = () => {
     if (user) {
@@ -948,21 +858,84 @@ function RegisterForm() {
     return regMode === 'CREATE' ? leaderDetails : individualDetails;
   };
 
-  const getInternalPayUrl = (u: any) => {
-    const razorpayUrl = getDirectRazorpayUrl(u);
-    const params = new URLSearchParams();
-    params.set('url', razorpayUrl);
-    params.set('name', u.name || '');
-    params.set('email', u.email || '');
-    params.set('phone', u.phone || '');
-    params.set('rollNumber', u.rollNumber || '');
-    params.set('college', u.college || '');
-    const course = u.branch === 'Other' ? (regMode === 'CREATE' ? customLeaderBranch : customIndividualBranch) : (u.branch || '');
-    params.set('course', course);
-    params.set('year', u.year || '1st Year');
-    params.set('amount', String(getFinalPrice()));
-    return `/pay?${params.toString()}`;
+  const handleRazorpayRegistrationPayment = async (orderData: any, userDetails: any, registrationType: string, registrationDetails: any) => {
+    const loaded = await loadRazorpayScript();
+    if (!loaded) {
+      setErrorMsg('Failed to load Razorpay Checkout SDK. Please check your network connection.');
+      return;
+    }
+
+    const keyId = orderData.keyId || '';
+
+    const options = {
+      key: keyId,
+      amount: orderData.amount,
+      currency: orderData.currency || 'INR',
+      name: 'CodeSprint 2026',
+      description: 'Hackathon Registration Fee',
+      order_id: orderData.id,
+      handler: async function (response: any) {
+        setLoading(true);
+        setErrorMsg('');
+        try {
+          const verifyRes = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/payments/verify-and-register', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              registrationType,
+              registrationDetails,
+              amount: orderData.amount / 100
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          if (verifyRes.ok && verifyData.success) {
+            login(verifyData.token, verifyData.user);
+            setPaidUser(verifyData.user);
+            setReceiptDetails({
+              id: verifyData.user.paymentId || response.razorpay_payment_id,
+              amount: orderData.amount / 100,
+              date: new Date().toLocaleDateString()
+            });
+            setPaymentStep('success');
+            sessionStorage.removeItem('cs_individual_details');
+            sessionStorage.removeItem('cs_reg_mode');
+          } else {
+            setErrorMsg(verifyData.message || 'Registration verification failed.');
+          }
+        } catch (err) {
+          console.error(err);
+          setErrorMsg('Error verifying registration payment.');
+        } finally {
+          setLoading(false);
+        }
+      },
+      prefill: {
+        name: userDetails.name,
+        email: userDetails.email,
+        contact: userDetails.phone
+      },
+      theme: {
+        color: '#6d28d9'
+      },
+      modal: {
+        ondismiss: function () {
+          setLoading(false);
+        }
+      }
+    };
+
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
   };
+
+
+
 
   // Render Entry Screen Selection
   if (regMode === 'selection') {
@@ -1559,18 +1532,35 @@ function RegisterForm() {
 
                   <h3 className="text-xl font-extrabold text-slate-900">Complete Team Payment</h3>
                   <p className="text-xs text-slate-500 leading-relaxed max-w-md mx-auto">
-                    Please pay <strong>₹{getFinalPrice()}</strong>. We have opened the prefilled Razorpay checkout window. If it did not open, use the link below to pay.
+                    Please pay <strong>₹{getFinalPrice()}</strong>. If the Razorpay checkout window did not open, click the button below to try again.
                   </p>
 
                   <div className="my-4">
-                    <a
-                      href={getDirectRazorpayUrl(leaderDetails)}
-                      target="_blank"
-                      className="inline-flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all"
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (createdOrder) {
+                          const leaderPayload = {
+                            ...leaderDetails,
+                            college: leaderDetails.college.trim(),
+                            branch: leaderDetails.branch === 'Other' ? customLeaderBranch.trim() : leaderDetails.branch
+                          };
+                          const registrationDetails = {
+                            teamName: teamName.trim(),
+                            teamCode: teamCode.trim(),
+                            leader: leaderPayload,
+                            members: addedMembers,
+                            teamStatus: availabilityMode,
+                            availableSlots: availabilityMode === 'OPEN' ? selectedAvailableSlots : 0
+                          };
+                          await handleRazorpayRegistrationPayment(createdOrder, leaderPayload, 'TEAM', registrationDetails);
+                        }
+                      }}
+                      className="inline-flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-750 text-white font-bold text-xs rounded-xl shadow-md transition-all"
                     >
                       <span>Pay ₹{getFinalPrice()} Securely</span>
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
+                      <CreditCard className="h-4 w-4" />
+                    </button>
                   </div>
 
                   <form onSubmit={handleResubmitUtr} className="text-left border-t border-slate-100 pt-5 space-y-4">
@@ -1862,97 +1852,83 @@ function RegisterForm() {
               </div>
             )}
 
-            {/* ── REJECTED — UTR was rejected, let them retry ── */}
-            {paymentStep === 'rejected' && (
-              <div className="py-4 space-y-5">
-                <div className="text-center space-y-3">
-                  <div className="inline-flex p-3 bg-rose-50 rounded-full border border-rose-200 text-rose-600">
-                    <ShieldAlert className="h-7 w-7" />
-                  </div>
-                  <h3 className="text-xl font-extrabold text-slate-900">UTR Rejected</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-                    Your transaction reference could not be verified. Please pay again and re-submit a valid UTR number below.
-                  </p>
+            {/* ── PAY NOW — direct checkout via inline Razorpay ── */}
+            {(paymentStep === 'form' || paymentStep === 'utr-input' || paymentStep === 'rejected') && (
+              <div className="py-6 text-center space-y-6">
+                <div className="inline-flex p-4 bg-purple-50 rounded-full border border-purple-200 text-purple-600">
+                  <CreditCard className="h-8 w-8 animate-pulse" />
                 </div>
+                <h3 className="text-xl font-extrabold text-slate-900">Complete Payment</h3>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+                  Click the button below to pay <strong>₹{getFinalPrice()}</strong> securely using UPI, Card, Netbanking, or Wallets to activate your registration.
+                </p>
+                {errorMsg && <p className="text-rose-500 text-xs pl-1">{errorMsg}</p>}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    setErrorMsg('');
+                    try {
+                      let orderData = createdOrder;
+                      if (!orderData) {
+                        const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json'
+                          },
+                          body: JSON.stringify({
+                            registrationType: (regMode as string) === 'CREATE' ? 'TEAM' : 'INDIVIDUAL',
+                            quantity: (regMode as string) === 'CREATE' ? totalMembers : 1
+                          })
+                        });
+                        if (orderRes.ok) {
+                          orderData = await orderRes.json();
+                          setCreatedOrder(orderData);
+                        } else {
+                          const errData = await orderRes.json();
+                          setErrorMsg(errData.message || 'Failed to create payment order.');
+                          setLoading(false);
+                          return;
+                        }
+                      }
 
-                <a
-                  href={getDirectRazorpayUrl(getActiveUserDetails())}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all w-full"
+                      const registrationType = (regMode as string) === 'CREATE' ? 'TEAM' : 'INDIVIDUAL';
+                      const registrationDetails = (regMode as string) === 'CREATE' 
+                        ? {
+                            teamName: teamName.trim(),
+                            teamCode: teamCode.trim(),
+                            leader: {
+                              ...leaderDetails,
+                              college: leaderDetails.college.trim(),
+                              branch: leaderDetails.branch === 'Other' ? customLeaderBranch.trim() : leaderDetails.branch
+                            },
+                            members: addedMembers,
+                            teamStatus: availabilityMode,
+                            availableSlots: availabilityMode === 'OPEN' ? selectedAvailableSlots : 0
+                          }
+                        : {
+                            ...individualDetails,
+                            college: individualDetails.college.trim(),
+                            branch: individualDetails.branch === 'Other' ? customIndividualBranch.trim() : individualDetails.branch
+                          };
+
+                      await handleRazorpayRegistrationPayment(
+                        orderData,
+                        getActiveUserDetails(),
+                        registrationType,
+                        registrationDetails
+                      );
+                    } catch (err) {
+                      console.error(err);
+                      setErrorMsg('Failed to initiate checkout.');
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span>Pay ₹{getFinalPrice()} Securely</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-
-                <form onSubmit={handleResubmitUtr} className="text-left space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest pl-1 mb-1.5">New UTR / Transaction Reference</label>
-                    <input
-                      type="text" required maxLength={16}
-                      placeholder="Enter 12-digit UTR reference number"
-                      value={newUtr}
-                      onChange={e => setNewUtr(e.target.value.replace(/\s+/g, ''))}
-                      className="block w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono"
-                    />
-                    <p className="text-[10px] text-slate-400 pl-1 mt-1.5">Find this in your payment confirmation SMS or email.</p>
-                  </div>
-                  {errorMsg && <p className="text-rose-500 text-xs pl-1">{errorMsg}</p>}
-                  <button
-                    type="submit"
-                    disabled={loading || newUtr.length < 12}
-                    className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
-                  >
-                    {loading ? 'Submitting...' : 'Re-submit UTR & Request Verification'}
-                  </button>
-                </form>
-              </div>
-            )}
-
-            {/* ── FORM — UTR entry: new user after Razorpay redirect, or pending user on first login ── */}
-            {(paymentStep === 'form' || paymentStep === 'utr-input') && (
-              <div className="py-2 space-y-6">
-
-                {/* Header */}
-                <div className="text-center space-y-2">
-                  <div className="inline-flex items-center gap-2 py-1.5 px-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase rounded-full tracking-wider">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Payment Sent? Submit Your UTR
-                  </div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Enter Transaction Reference</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-                    Enter the <strong>UTR / Transaction Reference Number</strong> from your payment confirmation to complete registration.
-                  </p>
-                </div>
-
-
-
-
-
-                {/* UTR form */}
-                <form onSubmit={handleResubmitUtr} className="text-left space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest pl-1 mb-1.5">UTR / Transaction Reference Number</label>
-                    <input 
-                      type="text" 
-                      required 
-                      maxLength={16} 
-                      placeholder="Enter 12-digit UTR reference number" 
-                      value={newUtr} 
-                      onChange={e => setNewUtr(e.target.value.replace(/\s+/g, ''))} 
-                      className="block w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-mono" 
-                    />
-                    <p className="text-[10px] text-slate-400 pl-1 mt-1.5">Find this in your Razorpay/bank payment confirmation SMS or email.</p>
-                  </div>
-                  {errorMsg && <p className="text-rose-500 text-xs pl-1">{errorMsg}</p>}
-                  <button
-                    type="submit"
-                    disabled={loading || newUtr.length < 12}
-                    className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
-                  >
-                    {loading ? 'Submitting...' : 'Submit UTR & Request Verification'}
-                  </button>
-                </form>
+                  {loading ? 'Processing...' : `Pay ₹${getFinalPrice()} Online`}
+                </button>
               </div>
             )}
 
