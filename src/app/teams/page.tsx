@@ -16,6 +16,8 @@ interface Team {
   members: string[];
   membersList?: { name: string; gender: string; }[];
   remainingSlots: number;
+  availableSlots?: number;
+  teamStatus?: 'OPEN' | 'CLOSED';
   status: 'open' | 'full';
   inviteLink: string;
   joinRequests: any[];
@@ -67,7 +69,8 @@ export default function TeamsPage() {
       if (slotsOnly) params.append('slotsAvailable', 'true');
       params.append('sort', sortOrder);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/public/teams?${params.toString()}`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/public/teams?${params.toString()}`);
       if (res.ok) {
         const list = await res.json();
         setTeams(list);
@@ -147,21 +150,17 @@ export default function TeamsPage() {
   };
 
   return (
-    <div className="flex-1 w-full bg-slate-50 text-slate-800 relative overflow-hidden bg-grid py-20 px-4 sm:px-6 lg:px-8 animate-[fadeIn_0.3s_ease-out]">
+    <div className="flex-1 w-full bg-slate-50 text-slate-800 relative overflow-hidden bg-grid pt-8 pb-16 px-4 sm:px-6 lg:px-8 animate-[fadeIn_0.3s_ease-out]">
       {/* Decorative ambient glows in light mode */}
       <div className="absolute top-[-10%] left-[-15%] w-[40%] h-[40%] rounded-full bg-purple-100/50 blur-[100px] pointer-events-none -z-10" />
       <div className="absolute bottom-[-10%] right-[-15%] w-[40%] h-[40%] rounded-full bg-blue-100/50 blur-[100px] pointer-events-none -z-10" />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm mb-3">
-            <Sparkles className="h-3.5 w-3.5 text-purple-600" />
-            Hackathon Matchmaking Hub
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Public Hackathon Teams</h1>
+        <div className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Explore Hackathon Teams</h1>
           <p className="text-xs text-slate-500 mt-2 max-w-lg mx-auto leading-relaxed">
-            Browse public student groups looking for members for CodeSprint-2026. Send a request to join an open team or start your own.
+            Browse all open and closed student groups for CodeSprint-2026. Send a request to join an open team or start your own.
           </p>
         </div>
 
@@ -245,7 +244,7 @@ export default function TeamsPage() {
         ) : teams.length === 0 ? (
           <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl shadow-sm">
             <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-slate-800">No Public Teams Found</h3>
+            <h3 className="text-lg font-bold text-slate-800">No Teams Found</h3>
             <p className="text-xs text-slate-500 mt-1">Try modifying your search queries or create a team yourself.</p>
             {user?.paymentStatus === 'paid' && !user?.teamId && (
               <button
@@ -260,6 +259,7 @@ export default function TeamsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teams.map((team) => {
+              const isClosed = team.teamStatus === 'CLOSED';
               const isFull = team.status === 'full' || team.remainingSlots <= 0;
               const hasRequested = pendingRequests[team.id];
 
@@ -268,9 +268,6 @@ export default function TeamsPage() {
                   key={team.id}
                   className="bg-white border border-slate-200/85 hover:border-slate-350 p-6 rounded-2xl flex flex-col justify-between transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.01] relative group"
                 >
-                  {/* Top line highlight on hover */}
-                  <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-purple-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-
                   {/* Header / Meta */}
                   <div>
                     <div className="flex justify-between items-start gap-4 mb-3">
@@ -278,8 +275,16 @@ export default function TeamsPage() {
                         <School className="h-3.5 w-3.5 text-purple-600" />
                         {team.college}
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider font-mono ${isFull ? 'text-slate-400' : 'text-emerald-600 font-extrabold animate-pulse'}`}>
-                        {isFull ? 'Full' : 'Open'}
+                      <span
+                        className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
+                          isClosed
+                            ? 'text-amber-600 font-extrabold'
+                            : isFull
+                            ? 'text-slate-400 font-bold'
+                            : 'text-emerald-600 font-extrabold animate-pulse'
+                        }`}
+                      >
+                        {isClosed ? 'Closed' : isFull ? 'Full' : 'Open'}
                       </span>
                     </div>
 
@@ -291,9 +296,13 @@ export default function TeamsPage() {
                       Leader: <strong className="text-slate-700 font-semibold">{team.leaderName}</strong>
                     </p>
 
-                    <p className="text-xs text-slate-600 mt-3.5 leading-relaxed line-clamp-3">
-                      {team.description}
-                    </p>
+                    {team.description && 
+                     team.description !== 'Created during team registration.' && 
+                     !team.description.includes('created during registration') && (
+                      <p className="text-xs text-slate-600 mt-3.5 leading-relaxed line-clamp-3">
+                        {team.description}
+                      </p>
+                    )}
 
                     {/* Members List with Name and Gender */}
                     {team.membersList && team.membersList.length > 0 && (
@@ -318,12 +327,16 @@ export default function TeamsPage() {
 
                   {/* Footer / Slots & Actions */}
                   <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-                    <div className="flex flex-col text-left">
-                      <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Remaining</span>
-                      <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 flex items-center gap-1">
-                        <Users className="h-3.5 w-3.5 text-slate-450" />
-                        {team.remainingSlots} Slots
-                      </span>
+                    <div className="flex flex-col text-left min-h-[32px] justify-center">
+                      {!isClosed && !isFull && (
+                        <>
+                          <span className="text-[10px] text-slate-450 font-bold uppercase tracking-wider font-mono">Remaining</span>
+                          <span className="text-xs font-bold text-slate-800 font-mono mt-0.5 flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5 text-slate-450" />
+                            {team.remainingSlots} Slots
+                          </span>
+                        </>
+                      )}
                     </div>
 
                     {user?.teamId === team.id ? (
@@ -337,10 +350,17 @@ export default function TeamsPage() {
                       >
                         Request Pending
                       </button>
+                    ) : isClosed ? (
+                      <button
+                        disabled
+                        className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-400 rounded-xl text-xs font-semibold cursor-not-allowed"
+                      >
+                        Team Closed
+                      </button>
                     ) : isFull ? (
                       <button
                         disabled
-                        className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-450 rounded-xl text-xs font-semibold"
+                        className="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-450 rounded-xl text-xs font-semibold cursor-not-allowed"
                       >
                         Team Full
                       </button>

@@ -80,7 +80,8 @@ export default function Navbar() {
 
   const tabs = [
     { label: 'Home', href: '/' },
-    { label: 'Public Teams', href: '/teams' },
+    { label: 'Explore Teams', href: '/teams' },
+    { label: 'Participants', href: '/participants' },
   ];
 
   // Recalculate tab highlights
@@ -369,7 +370,16 @@ export default function Navbar() {
               pathname === '/teams' ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:text-slate-900'
             }`}
           >
-            Public Teams
+            Explore Teams
+          </Link>
+          <Link
+            href="/participants"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`px-3 py-2 rounded-lg text-sm font-bold transition-colors ${
+              pathname === '/participants' ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            Participants
           </Link>
           {user && (
             <Link
