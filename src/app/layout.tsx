@@ -5,6 +5,7 @@ import { AuthProvider } from "../context/AuthContext";
 import { SocketProvider } from "../context/SocketContext";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import VisitorTracker from "../components/VisitorTracker";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-purple-100 selection:text-purple-900">
         <AuthProvider>
           <SocketProvider>
+            <VisitorTracker />
             <Navbar />
             <div className="flex-1 flex flex-col overflow-x-hidden">
               {children}
