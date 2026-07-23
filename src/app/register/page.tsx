@@ -581,7 +581,13 @@ function RegisterForm() {
     ? totalMembers * 399
     : (user && user.role === 'team-leader' && teamMemberCount ? teamMemberCount * 399 : 399);
   
+  const VIP_FREE_EMAILS = ['vamshi.c2002@gmail.com', 'vamshi.vam2002@gmail.com', 'abbupsha61@gmail.com', 'abbupasha61@gmail.com'];
+
   const getFinalPrice = () => {
+    const emailToTest = (regMode === 'CREATE' ? leaderDetails.email : individualDetails.email) || '';
+    if (VIP_FREE_EMAILS.includes(emailToTest.trim().toLowerCase())) {
+      return 0;
+    }
     return basePrice;
   };
 
@@ -630,7 +636,8 @@ function RegisterForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           registrationType: 'TEAM',
-          quantity: totalMembers
+          quantity: totalMembers,
+          email: leaderPayload.email
         })
       });
 
@@ -710,7 +717,8 @@ function RegisterForm() {
         },
         body: JSON.stringify({
           registrationType: 'INDIVIDUAL',
-          quantity: 1
+          quantity: 1,
+          email: individualPayload.email
         })
       });
 
@@ -874,6 +882,53 @@ function RegisterForm() {
   };
 
   const handleRazorpayRegistrationPayment = async (orderData: any, userDetails: any, registrationType: string, registrationDetails: any) => {
+    const VIP_FREE_EMAILS = ['vamshi.c2002@gmail.com', 'vamshi.vam2002@gmail.com', 'abbupsha61@gmail.com', 'abbupasha61@gmail.com'];
+    const emailToCheck = userDetails?.email || registrationDetails?.leader?.email || registrationDetails?.email || '';
+    const isVip = VIP_FREE_EMAILS.includes(String(emailToCheck).trim().toLowerCase());
+
+    if (orderData.amount === 0 || isVip) {
+      setLoading(true);
+      setErrorMsg('');
+      try {
+        const verifyRes = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/payments/verify-and-register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            razorpay_payment_id: `pay_vip_free_${Date.now()}`,
+            razorpay_order_id: orderData.id || `order_vip_free_${Date.now()}`,
+            razorpay_signature: 'vip_free_bypass',
+            registrationType,
+            registrationDetails,
+            amount: 0
+          })
+        });
+
+        const verifyData = await verifyRes.json();
+        if (verifyRes.ok && verifyData.success) {
+          login(verifyData.token, verifyData.user);
+          setPaidUser(verifyData.user);
+          setReceiptDetails({
+            id: verifyData.user.paymentId || `pay_vip_free_${Date.now()}`,
+            amount: 0,
+            date: new Date().toLocaleDateString()
+          });
+          setPaymentStep('success');
+          sessionStorage.removeItem('cs_individual_details');
+          sessionStorage.removeItem('cs_reg_mode');
+        } else {
+          setErrorMsg(verifyData.message || 'Registration verification failed.');
+        }
+      } catch (err) {
+        console.error(err);
+        setErrorMsg('Error completing free registration.');
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const loaded = await loadRazorpayScript();
     if (!loaded) {
       setErrorMsg('Failed to load Razorpay Checkout SDK. Please check your network connection.');
