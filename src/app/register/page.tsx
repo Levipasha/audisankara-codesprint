@@ -647,7 +647,8 @@ function RegisterForm() {
           registrationType: 'TEAM',
           quantity: totalMembers,
           email: leaderPayload.email,
-          emails: [leaderPayload.email, ...addedMembers.map(m => m.email)]
+          emails: [leaderPayload.email, ...addedMembers.map(m => m.email)],
+          amount: getFinalPrice()
         })
       });
 
@@ -729,7 +730,8 @@ function RegisterForm() {
           registrationType: 'INDIVIDUAL',
           quantity: 1,
           email: individualPayload.email,
-          emails: [individualPayload.email]
+          emails: [individualPayload.email],
+          amount: getFinalPrice()
         })
       });
 
