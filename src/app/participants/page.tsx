@@ -26,9 +26,21 @@ export default function ParticipantsPage() {
   const [search, setSearch] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [joinedFilter, setJoinedFilter] = useState('');
+  const [selectedCollege, setSelectedCollege] = useState('');
 
-  const isFiltered = Boolean(search.trim() || selectedYear || joinedFilter);
+  const isFiltered = Boolean(search.trim() || selectedYear || joinedFilter || selectedCollege);
   const displayTotal = totalParticipants !== null ? totalParticipants : (loading ? 0 : participants.length);
+
+  // Extract unique colleges represented in the participants list
+  const collegesList = React.useMemo(() => {
+    const set = new Set<string>();
+    participants.forEach((p) => {
+      if (p.college) {
+        set.add(p.college.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [participants]);
 
   // Fetch initial total participants count on mount
   useEffect(() => {
@@ -81,6 +93,13 @@ export default function ParticipantsPage() {
     const startOf7DaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     return participants.filter((p) => {
+      // College Filter
+      if (selectedCollege) {
+        if (p.college?.trim().toLowerCase() !== selectedCollege.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
       // Year Filter
       if (selectedYear) {
         const y = selectedYear.toLowerCase();
@@ -116,13 +135,14 @@ export default function ParticipantsPage() {
 
       return true;
     });
-  }, [participants, selectedYear, joinedFilter]);
+  }, [participants, selectedYear, joinedFilter, selectedCollege]);
 
   // Clear filters
   const clearFilters = () => {
     setSearch('');
     setSelectedYear('');
     setJoinedFilter('');
+    setSelectedCollege('');
   };
 
   // Group participants by teamName
@@ -220,6 +240,25 @@ export default function ParticipantsPage() {
 
           {/* Filters Group */}
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+            {/* College Filter */}
+            <div className="relative flex-1 sm:flex-none">
+              <select
+                value={selectedCollege}
+                onChange={(e) => setSelectedCollege(e.target.value)}
+                className="w-full sm:w-40 py-2 pl-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:border-purple-500/50 text-xs appearance-none cursor-pointer truncate"
+              >
+                <option value="">All Colleges</option>
+                {collegesList.map((collegeName) => (
+                  <option key={collegeName} value={collegeName}>
+                    {collegeName}
+                  </option>
+                ))}
+              </select>
+              <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                <School className="h-3.5 w-3.5 text-slate-400" />
+              </span>
+            </div>
+
             {/* Year Filter */}
             <div className="relative flex-1 sm:flex-none">
               <select
