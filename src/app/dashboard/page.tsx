@@ -24,7 +24,7 @@ const loadRazorpayScript = () => {
 
 export default function UserDashboard() {
   const router = useRouter();
-  const { user, token, loading, logout, refreshUser } = useAuth();
+  const { user, token, loading, logout, refreshUser, updateUser } = useAuth();
   const { socket, addToast, triggerRefreshNotifications } = useSocket();
 
   // Tab State: overview | team | receipt | certificate
@@ -264,6 +264,8 @@ export default function UserDashboard() {
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.success) {
               setDashUtrSuccess(true);
+              // Immediately update auth state with the returned paid user
+              if (verifyData.user) updateUser(verifyData.user);
               await refreshUser();
             } else {
               setDashUtrError(verifyData.message || 'Payment verification failed.');
@@ -353,6 +355,8 @@ export default function UserDashboard() {
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.success) {
               addToast('Success', 'Payment verified successfully! Team members activated.', 'success');
+              // Immediately update auth state with the returned paid user
+              if (verifyData.user) updateUser(verifyData.user);
               fetchMyTeam();
               refreshUser();
             } else {
@@ -482,6 +486,8 @@ export default function UserDashboard() {
             const verifyData = await verifyRes.json();
             if (verifyRes.ok && verifyData.success) {
               addToast('Success', 'Payment verified! New teammates are now activated.', 'success');
+              // Immediately update auth state with the returned paid user
+              if (verifyData.user) updateUser(verifyData.user);
               setShowAddMemberModal(false);
               setAddMemberForm({
                 name: '',

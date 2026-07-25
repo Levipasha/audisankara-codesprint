@@ -40,6 +40,7 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<User | null>;
+  updateUser: (user: User) => void;
   isAdmin: boolean;
   isPaid: boolean;
   hasTeam: boolean;
@@ -102,6 +103,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
@@ -120,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         refreshUser,
+        updateUser,
         isAdmin,
         isPaid,
         hasTeam,
