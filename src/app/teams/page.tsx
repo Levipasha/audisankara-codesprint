@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { Search, Filter, ArrowUpDown, Sparkles, User, Users, School, ArrowRight, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Search, Filter, ArrowUpDown, Sparkles, User, Users, School, ArrowRight, CheckCircle2, ShieldAlert, UserCheck } from 'lucide-react';
 
 interface Team {
   id: string;
@@ -24,6 +24,15 @@ interface Team {
   createdAt: string;
 }
 
+interface SoloParticipant {
+  id: string;
+  name: string;
+  college: string;
+  year: string;
+  branch: string;
+  gender: string;
+}
+
 export default function TeamsPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -31,8 +40,11 @@ export default function TeamsPage() {
 
   // State lists
   const [teams, setTeams] = useState<Team[]>([]);
+  const [soloParticipants, setSoloParticipants] = useState<SoloParticipant[]>([]);
+  const [soloLoading, setSoloLoading] = useState(true);
   const [colleges, setColleges] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'teams' | 'solo'>('teams');
 
   // Filters state
   const [search, setSearch] = useState('');
@@ -92,8 +104,29 @@ export default function TeamsPage() {
     }
   };
 
+  // Fetch solo (unpaired) participants
+  const fetchSoloParticipants = async () => {
+    setSoloLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (selectedCollege) params.append('college', selectedCollege);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const res = await fetch(`${apiUrl}/api/public/solo-participants?${params.toString()}`);
+      if (res.ok) {
+        const list = await res.json();
+        setSoloParticipants(list);
+      }
+    } catch (err) {
+      console.error('Error fetching solo participants:', err);
+    } finally {
+      setSoloLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchTeams();
+    fetchSoloParticipants();
   }, [search, selectedCollege, slotsOnly, sortOrder, user]);
 
   // Handle Join Request
@@ -153,6 +186,7 @@ export default function TeamsPage() {
   const totalTeams = teams.length;
   const openTeams = teams.filter(t => t.teamStatus !== 'CLOSED' && t.status !== 'full' && t.remainingSlots > 0).length;
   const closedTeams = teams.filter(t => t.teamStatus === 'CLOSED' || t.status === 'full' || t.remainingSlots <= 0).length;
+  const soloCount = soloParticipants.length;
 
   return (
     <div className="flex-1 w-full bg-slate-50 text-slate-800 relative overflow-hidden bg-grid pt-8 pb-16 px-4 sm:px-6 lg:px-8 animate-[fadeIn_0.3s_ease-out]">
@@ -169,8 +203,8 @@ export default function TeamsPage() {
           </p>
         </div>
 
-        {/* Teams Stats Summary Cards */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+        {/* Stats Summary Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {/* Total Teams Card */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-3">
             <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
@@ -218,6 +252,46 @@ export default function TeamsPage() {
               </div>
             </div>
           </div>
+
+          {/* Solo Participants Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('solo')}>
+            <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center flex-shrink-0">
+              <UserCheck className="h-4.5 w-4.5 sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-550 uppercase tracking-wider">Solo / Unpaired</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-xl sm:text-3xl font-black text-sky-700">
+                  {soloLoading ? '...' : soloCount}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:inline">registered</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Switcher */}
+        <div className="flex items-center gap-2 mb-6 border-b border-slate-200">
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`pb-2.5 px-1 text-xs font-bold border-b-2 transition-all ${
+              activeTab === 'teams'
+                ? 'border-purple-600 text-purple-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            🏆 Teams ({loading ? '…' : totalTeams})
+          </button>
+          <button
+            onClick={() => setActiveTab('solo')}
+            className={`pb-2.5 px-1 text-xs font-bold border-b-2 transition-all ${
+              activeTab === 'solo'
+                ? 'border-sky-600 text-sky-700'
+                : 'border-transparent text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            👤 Solo / Unpaired ({soloLoading ? '…' : soloCount})
+          </button>
         </div>
 
         {/* Filter Toolbar */}
@@ -229,7 +303,7 @@ export default function TeamsPage() {
             </span>
             <input
               type="text"
-              placeholder="Search by team leader or name..."
+              placeholder={activeTab === 'teams' ? 'Search by team leader or name...' : 'Search by name, college, branch...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="block w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500/50 text-xs"
@@ -255,36 +329,41 @@ export default function TeamsPage() {
               </span>
             </div>
 
-            {/* Sorting Dropdown */}
-            <div className="relative flex-1 sm:flex-none">
-              <select
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-                className="w-full sm:w-44 py-2 px-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:border-purple-500/50 text-xs appearance-none cursor-pointer"
-              >
-                <option value="alphabetical">Sort Alphabetical</option>
-                <option value="newest">Sort Newest</option>
-              </select>
-              <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-                <ArrowUpDown className="h-3 w-3" />
-              </span>
-            </div>
+            {/* Sorting Dropdown - teams tab only */}
+            {activeTab === 'teams' && (
+              <div className="relative flex-1 sm:flex-none">
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className="w-full sm:w-44 py-2 px-3 pr-8 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:border-purple-500/50 text-xs appearance-none cursor-pointer"
+                >
+                  <option value="alphabetical">Sort Alphabetical</option>
+                  <option value="newest">Sort Newest</option>
+                </select>
+                <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
+                  <ArrowUpDown className="h-3 w-3" />
+                </span>
+              </div>
+            )}
 
-            {/* Slots available toggle */}
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none pl-1">
-              <input
-                type="checkbox"
-                checked={slotsOnly}
-                onChange={(e) => setSlotsOnly(e.target.checked)}
-                className="rounded border-slate-300 text-purple-650 focus:ring-purple-500 h-4 w-4 bg-white"
-              />
-              Slots Available Only
-            </label>
+            {/* Slots available toggle - teams tab only */}
+            {activeTab === 'teams' && (
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none pl-1">
+                <input
+                  type="checkbox"
+                  checked={slotsOnly}
+                  onChange={(e) => setSlotsOnly(e.target.checked)}
+                  className="rounded border-slate-300 text-purple-650 focus:ring-purple-500 h-4 w-4 bg-white"
+                />
+                Slots Available Only
+              </label>
+            )}
           </div>
         </div>
 
-        {/* Grid Lists */}
-        {loading ? (
+        {/* ===== TEAMS TAB ===== */}
+        {activeTab === 'teams' && (
+          loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3].map((s) => (
               <div key={s} className="bg-white border border-slate-200/80 p-6 rounded-2xl h-60 animate-pulse flex flex-col justify-between shadow-sm">
@@ -434,6 +513,66 @@ export default function TeamsPage() {
               );
             })}
           </div>
+        )
+        )}
+
+        {/* ===== SOLO PARTICIPANTS TAB ===== */}
+        {activeTab === 'solo' && (
+          soloLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {[1,2,3,4,5,6,7,8].map(s => (
+                <div key={s} className="bg-white border border-slate-200 p-4 rounded-2xl h-28 animate-pulse shadow-sm" />
+              ))}
+            </div>
+          ) : soloParticipants.length === 0 ? (
+            <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl shadow-sm">
+              <UserCheck className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-slate-800">No Solo Participants</h3>
+              <p className="text-xs text-slate-500 mt-1">All registered participants have joined a team.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {soloParticipants.map((p) => (
+                <div
+                  key={p.id}
+                  className="bg-white border border-slate-200/85 hover:border-sky-300 p-4 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.01] group"
+                >
+                  {/* Avatar */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${
+                      p.gender?.toLowerCase() === 'female'
+                        ? 'bg-pink-100 text-pink-700'
+                        : 'bg-sky-100 text-sky-700'
+                    }`}>
+                      {p.name.trim().split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-900 truncate group-hover:text-sky-700 transition-colors">{p.name}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                        p.gender?.toLowerCase() === 'female'
+                          ? 'bg-pink-50 border-pink-100 text-pink-600'
+                          : 'bg-blue-50 border-blue-100 text-blue-600'
+                      }`}>{p.gender}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-slate-500 font-medium truncate flex items-center gap-1">
+                      <School className="h-3 w-3 flex-shrink-0 text-slate-400" />
+                      {p.college}
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-medium">
+                      {p.branch && <span>{p.branch} · </span>}{p.year}
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-slate-100">
+                    <span className="text-[9px] font-bold text-sky-600 bg-sky-50 border border-sky-100 px-2 py-0.5 rounded-full">
+                      Looking for a team
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>

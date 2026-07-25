@@ -12,6 +12,7 @@ export default function LoginPage() {
   const { login, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error'; registerUrl?: string } | null>(null);
+  const [bypassEmail, setBypassEmail] = useState('');
 
   useEffect(() => {
     // Check query params for impersonation token
@@ -46,7 +47,7 @@ export default function LoginPage() {
       } else if (user.paymentStatus !== 'paid') {
         router.push('/register');
       } else if (!user.teamId) {
-        router.push('/get-in');
+        router.push('/teams');
       } else {
         router.push('/dashboard');
       }
@@ -102,12 +103,51 @@ export default function LoginPage() {
           } else {
             const destination = data.user.paymentStatus !== 'paid'
               ? '/register'
-              : (!data.user.teamId ? '/get-in' : '/dashboard');
+              : (!data.user.teamId ? '/teams' : '/dashboard');
             router.push(destination);
           }
         }, 1000);
       } else {
         setMessage({ text: data.message || 'Google authentication failed.', type: 'error' });
+      }
+    } catch {
+      setMessage({ text: 'Could not connect to server. Is the backend running?', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBypassLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bypassEmail.trim()) return;
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/auth/bypass-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: bypassEmail.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.token && data.user) {
+        login(data.token, data.user);
+        setMessage({ text: 'Bypass login successful! Redirecting...', type: 'success' });
+        setTimeout(() => {
+          if (data.user.role === 'admin') {
+            router.push('/dashboard');
+          } else {
+            const destination = data.user.paymentStatus !== 'paid'
+              ? '/register'
+              : (!data.user.teamId ? '/teams' : '/dashboard');
+            router.push(destination);
+          }
+        }, 1000);
+      } else {
+        setMessage({ text: data.message || 'Bypass login failed.', type: 'error' });
       }
     } catch {
       setMessage({ text: 'Could not connect to server. Is the backend running?', type: 'error' });
@@ -185,6 +225,45 @@ export default function LoginPage() {
             )}
             {loading ? 'Signing in…' : 'Continue with Google'}
           </button>
+
+          {/* ── BYPASS LOGIN ── set BYPASS_ENABLED to true to re-enable ── */}
+          {(false /* BYPASS_ENABLED */) && (<>
+          {/* Bypass Login for Testing */}
+          <div className="relative my-5 flex py-1 items-center">
+            <div className="flex-grow border-t border-slate-200"></div>
+            <span className="flex-shrink mx-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Or Tester Bypass</span>
+            <div className="flex-grow border-t border-slate-200"></div>
+          </div>
+
+          <form onSubmit={handleBypassLogin} className="space-y-3.5">
+            <div>
+              <label htmlFor="bypass-email" className="block text-[11px] font-medium text-slate-500 mb-1.5 pl-1">
+                Registered Email
+              </label>
+              <input
+                id="bypass-email"
+                type="email"
+                value={bypassEmail}
+                onChange={(e) => setBypassEmail(e.target.value)}
+                placeholder="e.g. user@gmail.com"
+                className="w-full px-4 py-3 rounded-2xl border border-slate-200 bg-slate-50/50 text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:border-slate-900 focus:bg-white transition-all shadow-sm"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3.5 px-4 rounded-2xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 shadow-lg active:scale-[0.98]"
+            >
+              {loading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                'Sign In Instantly'
+              )}
+            </button>
+          </form>
+          </>)}
+
 
           <p className="text-[10px] text-slate-500 text-center mt-5 leading-relaxed">
             New to CodeSprint-2026? Google sign-in will guide you through registration.

@@ -216,7 +216,7 @@ function RegisterForm() {
         if (user.teamId) {
           router.push('/dashboard');
         } else {
-          router.push('/get-in');
+          router.push('/teams');
         }
       } else if (user.paymentStatus === 'submitted') {
         setRegMode('JOIN');
@@ -2157,7 +2157,7 @@ function RegisterForm() {
 
                 <div className="flex flex-col gap-3 max-w-sm mx-auto pt-4">
                   <button
-                    onClick={() => router.push('/get-in')}
+                    onClick={() => router.push('/teams')}
                     className="py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer w-full"
                   >
                     <ArrowRight className="h-4 w-4" />

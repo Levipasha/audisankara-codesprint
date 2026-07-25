@@ -381,11 +381,10 @@ export default function UserDashboard() {
     }
   };
 
-  const handleAddMemberSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleAddMemberSubmit = async (): Promise<boolean> => {
     if (sessionMembers.length === 0) {
       setAddMemberError('Please add at least one member.');
-      return;
+      return false;
     }
 
     setAddMemberLoading(true);
@@ -403,34 +402,141 @@ export default function UserDashboard() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        addToast('Success', 'Teammate(s) added successfully!', 'success');
-        setShowAddMemberModal(false);
-        setAddMemberForm({
-          name: '',
-          email: '',
-          phone: '',
-          rollNumber: '',
-          college: '',
-          branch: '',
-          year: '1st Year',
-          gender: 'Male',
-          tshirtSize: 'M',
-          foodPreference: 'Veg',
-          utr: ''
-        });
-        setCustomBranch('');
-        setSessionMembers([]);
-        setAddMemberStep('input');
-        fetchMyTeam();
-        refreshUser();
+        return true;
       } else {
         setAddMemberError(data.message || 'Failed to add member.');
+        return false;
       }
     } catch (err) {
       console.error(err);
       setAddMemberError('Network connection error.');
+      return false;
     } finally {
       setAddMemberLoading(false);
+    }
+  };
+
+  // Combined: Save members then immediately open Razorpay
+  const handleSaveAndPay = async () => {
+    const saved = await handleAddMemberSubmit();
+    if (!saved) return;
+
+    // Members saved — now open Razorpay for the newly added members
+    try {
+      const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!orderRes.ok) {
+        const errData = await orderRes.json();
+        addToast('Error', errData.message || 'Failed to create payment order.', 'warning');
+        // Members are saved, but payment failed — refresh so leader can pay later
+        fetchMyTeam();
+        refreshUser();
+        setShowAddMemberModal(false);
+        return;
+      }
+
+      const orderData = await orderRes.json();
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        addToast('Error', 'Failed to load Razorpay SDK. Please check your internet connection.', 'warning');
+        fetchMyTeam();
+        refreshUser();
+        setShowAddMemberModal(false);
+        return;
+      }
+
+      const keyId = orderData.keyId || '';
+      const membersToAdd = [...sessionMembers];
+
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency || 'INR',
+        name: 'CodeSprint 2026',
+        description: `Team Registration – ${membersToAdd.length} new member(s)`,
+        order_id: orderData.id,
+        handler: async function (response: any) {
+          try {
+            const verifyRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/verify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                amount: orderData.amount / 100
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            if (verifyRes.ok && verifyData.success) {
+              addToast('Success', 'Payment verified! New teammates are now activated.', 'success');
+              setShowAddMemberModal(false);
+              setAddMemberForm({
+                name: '',
+                email: '',
+                phone: '',
+                rollNumber: '',
+                college: '',
+                branch: '',
+                year: '1st Year',
+                gender: 'Male',
+                tshirtSize: 'M',
+                foodPreference: 'Veg',
+                utr: ''
+              });
+              setCustomBranch('');
+              setSessionMembers([]);
+              setAddMemberStep('input');
+              fetchMyTeam();
+              refreshUser();
+            } else {
+              addToast('Error', verifyData.message || 'Payment verification failed.', 'warning');
+              fetchMyTeam();
+              refreshUser();
+            }
+          } catch (err) {
+            console.error(err);
+            addToast('Error', 'Error verifying payment signature.', 'warning');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: user?.phone || ''
+        },
+        theme: {
+          color: '#6d28d9'
+        },
+        modal: {
+          ondismiss: () => {
+            // If user closes Razorpay without paying, members are already saved — refresh
+            fetchMyTeam();
+            refreshUser();
+            setShowAddMemberModal(false);
+          }
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error(err);
+      addToast('Error', 'Failed to initiate checkout.', 'warning');
+      fetchMyTeam();
+      refreshUser();
+      setShowAddMemberModal(false);
     }
   };
 
@@ -1787,7 +1893,7 @@ export default function UserDashboard() {
                       {sessionMembers.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => handleAddMemberSubmit()}
+                          onClick={() => handleSaveAndPay()}
                           disabled={addMemberLoading}
                           className="px-5 py-2.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
                         >
@@ -1796,7 +1902,7 @@ export default function UserDashboard() {
                           ) : (
                             <Check className="h-3.5 w-3.5" />
                           )}
-                          <span>Save & Add Teammates</span>
+                          <span>Pay ₹{sessionMembers.length * 399} & Add Teammates</span>
                         </button>
                       )}
                       <button
@@ -1885,8 +1991,27 @@ export default function UserDashboard() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 text-center border border-slate-200 bg-slate-50 text-slate-500 rounded-xl text-xs font-semibold">
-                    Team capacity reached (5 total members added). Remove a teammate from the session list to add another.
+                  <div className="space-y-4">
+                    <div className="p-4 text-center border border-slate-200 bg-slate-50 text-slate-500 rounded-xl text-xs font-semibold">
+                      Team capacity reached (5 total members added). Remove a teammate from the session list to add another.
+                    </div>
+                    {sessionMembers.length > 0 && (
+                      <div className="pt-4 border-t border-slate-100 flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAndPay()}
+                          disabled={addMemberLoading}
+                          className="px-5 py-2.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.98]"
+                        >
+                          {addMemberLoading ? (
+                            <Loader className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Check className="h-3.5 w-3.5" />
+                          )}
+                          <span>Pay ₹{sessionMembers.length * 399} & Add Teammates</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
