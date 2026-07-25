@@ -149,6 +149,11 @@ export default function TeamsPage() {
     }
   };
 
+  // Counts calculations
+  const totalTeams = teams.length;
+  const openTeams = teams.filter(t => t.teamStatus !== 'CLOSED' && t.status !== 'full' && t.remainingSlots > 0).length;
+  const closedTeams = teams.filter(t => t.teamStatus === 'CLOSED' || t.status === 'full' || t.remainingSlots <= 0).length;
+
   return (
     <div className="flex-1 w-full bg-slate-50 text-slate-800 relative overflow-hidden bg-grid pt-8 pb-16 px-4 sm:px-6 lg:px-8 animate-[fadeIn_0.3s_ease-out]">
       {/* Decorative ambient glows in light mode */}
@@ -157,15 +162,66 @@ export default function TeamsPage() {
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Explore Hackathon Teams</h1>
           <p className="text-xs text-slate-500 mt-2 max-w-lg mx-auto leading-relaxed">
             Browse all open and closed student groups for CodeSprint-2026. Send a request to join an open team or start your own.
           </p>
         </div>
 
+        {/* Teams Stats Summary Cards */}
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-6">
+          {/* Total Teams Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-3">
+            <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center flex-shrink-0">
+              <Users className="h-4.5 w-4.5 sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Teams</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-xl sm:text-3xl font-black text-slate-900">
+                  {loading ? '...' : totalTeams}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-555 font-medium hidden sm:inline">total</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Open Teams Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-3">
+            <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="h-4.5 w-4.5 sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-550 uppercase tracking-wider">Open Teams</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-xl sm:text-3xl font-black text-emerald-700">
+                  {loading ? '...' : openTeams}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:inline">active</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Closed Teams Card */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3 sm:p-5 shadow-sm hover:shadow-md transition-all flex items-center gap-3">
+            <div className="h-8 w-8 sm:h-12 sm:w-12 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
+              <ShieldAlert className="h-4.5 w-4.5 sm:h-6 sm:w-6" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="text-[10px] sm:text-xs font-semibold text-slate-550 uppercase tracking-wider">Closed/Full</p>
+              <div className="flex items-baseline gap-1.5 mt-0.5">
+                <span className="text-xl sm:text-3xl font-black text-amber-700">
+                  {loading ? '...' : closedTeams}
+                </span>
+                <span className="text-[10px] sm:text-xs text-slate-500 font-medium hidden sm:inline">filled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Filter Toolbar */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 mb-10 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 mb-8 flex flex-col md:flex-row gap-4 items-center justify-between shadow-sm">
           {/* Search Box */}
           <div className="relative w-full md:w-80">
             <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
