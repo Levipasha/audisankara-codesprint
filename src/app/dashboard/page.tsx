@@ -150,7 +150,19 @@ export default function UserDashboard() {
 
 
   const getPaymentRecords = () => {
-    if (!teamDetails?.members) return [];
+    if (!teamDetails?.members) {
+      if (user && (user.paymentId || user.utr)) {
+        const txId = (user.paymentId || user.utr || '').trim();
+        return txId ? [{
+          members: [user],
+          utr: txId,
+          status: user.paymentStatus,
+          amount: user.amountPaid || 399,
+          date: user.createdAt
+        }] : [];
+      }
+      return [];
+    }
     
     // Group members by transaction ID (prefer paymentId, fallback to utr)
     const groups: { [key: string]: { members: any[], utr: string, status: string, amount: number, date?: string } } = {};
