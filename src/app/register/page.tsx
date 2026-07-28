@@ -1305,6 +1305,7 @@ function RegisterForm() {
                   <select id="gender" value={leaderDetails.gender} onChange={handleLeaderChange} className="block w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>
@@ -1483,6 +1484,7 @@ function RegisterForm() {
                       <select id="m_gender" value={memberForm.gender} onChange={handleMemberChange} className="block w-full px-3 py-2 rounded-xl border border-slate-200 text-xxs">
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
+                        <option value="Other">Other</option>
                       </select>
                     </div>
                     <div>
@@ -1981,6 +1983,7 @@ function RegisterForm() {
                 <select id="gender" value={individualDetails.gender} onChange={handleIndividualChange} className="block w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs">
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div>
