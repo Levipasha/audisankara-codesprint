@@ -83,7 +83,7 @@ const BENEFITS = [
 const HIGHLIGHTS = [
   '8-Hours Continuous Hackathon',
   'Randomly Allocated Problem Statements',
-  'Organized by Audisankara University',
+  'Organized by Audisankara Deemed to be University, Gudur',
   'NAAC A+ Accredited Campus',
   '15+ Cash & Certificate Award Categories',
   'Open-Source Libraries & AI Tools Allowed',
@@ -238,7 +238,7 @@ export default function LandingPage() {
             <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight leading-none text-slate-900">
               CodeSprint-2026
               <span className="block text-purple-600 text-xs sm:text-sm font-semibold tracking-[0.2em] uppercase font-mono mt-2">
-                by Audisankara University
+                by Audisankara Deemed to be University, Gudur
               </span>
               <span className="block mt-4 text-2xl sm:text-3xl md:text-4xl font-bold text-slate-500 leading-tight">
                 National Level Coding Hackathon & Prototype Sprint

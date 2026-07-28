@@ -1049,7 +1049,7 @@ function RegisterForm() {
 
         <div className="w-full max-w-3xl bg-white border border-slate-200 rounded-3xl p-8 md:p-12 shadow-2xl text-center">
           <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-2">CodeSprint 2026 Registration</h1>
-          <p className="text-sm text-slate-500 mb-6 max-w-lg mx-auto">Get ready for the ultimate 8-hour hackathon. Choose your path below to secure your spot at Audisankara University.</p>
+          <p className="text-sm text-slate-500 mb-6 max-w-lg mx-auto">Get ready for the ultimate 8-hour hackathon. Choose your path below to secure your spot at Audisankara Deemed to be University, Gudur.</p>
 
           <div className="mb-8 p-3.5 bg-purple-50/80 border border-purple-200/80 rounded-2xl text-purple-900 text-xs leading-relaxed flex items-center justify-center gap-2.5 max-w-xl mx-auto shadow-xs">
             <Info className="h-4.5 w-4.5 text-purple-600 flex-shrink-0" />
