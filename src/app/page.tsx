@@ -105,7 +105,7 @@ const INCLUSIONS = [
 // FAQ items
 const FAQS = [
   { q: 'Who is eligible to participate?', a: 'All college students from any branch or department are eligible to register. Cross-department teams are highly encouraged.' },
-  { q: 'What is the team size and composition?', a: 'Teams must consist of 3 to 5 members. It is mandatory to have minimum one female member in every team.' },
+  { q: 'What is the team size and composition?', a: 'Teams must consist of 3 to 5 members.' },
   { q: 'What is the registration fee?', a: 'The registration fee is ₹399 per participant, which includes the event T-Shirt, participation certificate, and a working lunch.' },
   { q: 'How are problem statements selected?', a: 'Each team will receive one randomly allocated problem statement from healthcare, agriculture, retail, finance, retail, smart cities, retailer, logistics, retailer, environment, retail, retail, retailers or hospitality. Teams must build a working prototype in 8 hours.' },
   { q: 'Are AI tools and third-party libraries allowed?', a: 'Yes! Teams are allowed to use open-source libraries and AI tools (like ChatGPT, Claude, Gemini, and GitHub Copilot) for research and development. However, teams must fully understand their code.' },
@@ -743,7 +743,6 @@ export default function LandingPage() {
               <ul className="space-y-3.5 text-xs text-slate-700">
                 {[
                   'Team size must be between 3 and 5 members',
-                  'Minimum one female member is mandatory in every team',
                   'Every member must actively contribute to the prototype',
                   'Plagiarism of any form leads to immediate disqualification',
                   'Open-source libraries and generative AI tools are permitted',

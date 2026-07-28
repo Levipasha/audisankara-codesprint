@@ -616,14 +616,6 @@ function RegisterForm() {
     return basePrice;
   };
 
-  // Check if at least one female is present
-  const hasFemaleParticipant = () => {
-    if (regMode !== 'CREATE') return true; // not applicable for join
-    const leaderGender = leaderDetails.gender.toLowerCase();
-    const membersGenders = addedMembers.map(m => m.gender.toLowerCase());
-    return leaderGender === 'female' || membersGenders.includes('female');
-  };
-
   // Submit team registration and proceed to payment (Step 4 CREATE)
   const handleTeamRegistrationSubmit = async () => {
     setErrorMsg('');
@@ -635,9 +627,6 @@ function RegisterForm() {
     }
     if (totalMembers > 5) {
       return setErrorMsg('Maximum 5 members are allowed in a team.');
-    }
-    if (!hasFemaleParticipant()) {
-      return setErrorMsg('At least one female participant is mandatory for every team.');
     }
     if (duplicatePhones[leaderDetails.phone]) {
       return setErrorMsg(`The Team Leader phone number (${leaderDetails.phone}) is already registered.`);
@@ -1610,10 +1599,6 @@ function RegisterForm() {
                     setErrorMsg('A minimum of 3 members is required before proceeding to checkout.');
                     return;
                   }
-                  if (!hasFemaleParticipant()) {
-                    setErrorMsg('Your team must contain at least one female participant to proceed.');
-                    return;
-                  }
                   setCreateStep(4);
                 }}
                 className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
@@ -1668,15 +1653,7 @@ function RegisterForm() {
                       </ul>
                     </div>
 
-                    {!hasFemaleParticipant() && (
-                      <div className="p-3 border border-rose-200 bg-rose-50 text-rose-800 text-[11px] rounded-xl flex gap-2">
-                        <ShieldAlert className="h-4.5 w-4.5 text-rose-500 flex-shrink-0" />
-                        <span><strong>Warning:</strong> No female participant present in the team. At least one female member (either leader or participant) is mandatory.</span>
-                      </div>
-                    )}
                   </div>
-
-
 
                   {/* Pricing details */}
                   <div className="p-5 border border-slate-250 bg-slate-50 rounded-2xl flex flex-col gap-2.5">
@@ -1693,7 +1670,7 @@ function RegisterForm() {
 
                   <button
                     type="button"
-                    disabled={loading || !hasFemaleParticipant()}
+                    disabled={loading}
                     onClick={handleTeamRegistrationSubmit}
                     className="w-full py-3.5 px-4 bg-purple-600 hover:bg-purple-750 text-white disabled:opacity-50 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
                   >
