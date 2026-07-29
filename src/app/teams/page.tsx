@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import { Search, Filter, ArrowUpDown, Sparkles, User, Users, School, ArrowRight, CheckCircle2, ShieldAlert, UserCheck } from 'lucide-react';
+import { API_URL } from '../../config/api';
 
 interface Team {
   id: string;
@@ -59,7 +60,7 @@ export default function TeamsPage() {
   useEffect(() => {
     const fetchColleges = async () => {
       try {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/public/colleges');
+        const res = await fetch(`${API_URL}/api/public/colleges`);
         if (res.ok) {
           const list = await res.json();
           setColleges(list);
@@ -81,8 +82,7 @@ export default function TeamsPage() {
       if (slotsOnly) params.append('slotsAvailable', 'true');
       params.append('sort', sortOrder);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/public/teams?${params.toString()}`);
+      const res = await fetch(`${API_URL}/api/public/teams?${params.toString()}`);
       if (res.ok) {
         const list = await res.json();
         setTeams(list);
@@ -111,8 +111,7 @@ export default function TeamsPage() {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
       if (selectedCollege) params.append('college', selectedCollege);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/public/solo-participants?${params.toString()}`);
+      const res = await fetch(`${API_URL}/api/public/solo-participants?${params.toString()}`);
       if (res.ok) {
         const list = await res.json();
         setSoloParticipants(list);

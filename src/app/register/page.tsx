@@ -597,8 +597,8 @@ function RegisterForm() {
     ? totalMembers * 399
     : (user && user.role === 'team-leader' && teamMemberCount ? teamMemberCount * 399 : 399);
   
-  const ONE_TIME_FREE_EMAILS = ['athoshith1@gmail.com'];
-  const VIP_FREE_EMAILS = ['vamshi.c2002@gmail.com', 'vamshi.vam2002@gmail.com', 'abbupsha61@gmail.com', 'abbupasha61@gmail.com'];
+  const ONE_TIME_FREE_EMAILS: string[] = [];
+  const VIP_FREE_EMAILS: string[] = [];
 
   const getFinalPrice = () => {
     const emailsInTeam: string[] = regMode === 'CREATE'
@@ -915,7 +915,7 @@ function RegisterForm() {
   };
 
   const handleRazorpayRegistrationPayment = async (orderData: any, userDetails: any, registrationType: string, registrationDetails: any) => {
-    const VIP_FREE_EMAILS = ['vamshi.c2002@gmail.com', 'vamshi.vam2002@gmail.com', 'abbupsha61@gmail.com', 'abbupasha61@gmail.com'];
+    const VIP_FREE_EMAILS: string[] = [];
     const emailToCheck = userDetails?.email || registrationDetails?.leader?.email || registrationDetails?.email || '';
     const isVip = VIP_FREE_EMAILS.includes(String(emailToCheck).trim().toLowerCase());
 

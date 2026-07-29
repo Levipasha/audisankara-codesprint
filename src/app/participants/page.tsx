@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, User, Users, School, GraduationCap, Crown, Shield, UserCheck, X, Sparkles, Calendar } from 'lucide-react';
+import { API_URL } from '../../config/api';
 
 interface Participant {
   id: string;
@@ -64,8 +65,7 @@ export default function ParticipantsPage() {
   useEffect(() => {
     const fetchTotalCount = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-        const res = await fetch(`${apiUrl}/api/public/participants`);
+        const res = await fetch(`${API_URL}/api/public/participants`);
         if (res.ok) { const list = await res.json(); setTotalParticipants(list.length); }
       } catch (err) { console.error('Failed to fetch total count:', err); }
     };
@@ -78,8 +78,7 @@ export default function ParticipantsPage() {
     try {
       const params = new URLSearchParams();
       if (search) params.append('search', search);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/public/participants?${params.toString()}`);
+      const res = await fetch(`${API_URL}/api/public/participants?${params.toString()}`);
       if (res.ok) {
         const list = await res.json();
         setParticipants(list);
@@ -95,8 +94,7 @@ export default function ParticipantsPage() {
     try {
       const params = new URLSearchParams();
       if (soloSearch) params.append('search', soloSearch);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-      const res = await fetch(`${apiUrl}/api/public/solo-participants?${params.toString()}`);
+      const res = await fetch(`${API_URL}/api/public/solo-participants?${params.toString()}`);
       if (res.ok) { const list = await res.json(); setSoloParticipants(list); }
     } catch (err) { console.error('Error fetching solo participants:', err); }
     finally { setSoloLoading(false); }
