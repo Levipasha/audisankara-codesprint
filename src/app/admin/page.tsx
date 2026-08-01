@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { BarChart3, Users, Ticket, Award, Settings, Bell, Search, UserCheck, ShieldAlert, Plus, ToggleLeft, ToggleRight, Trash2, GitMerge, FileDown, Radio, Camera, RefreshCw, Sparkles, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Users, Ticket, Award, Settings, Bell, Search, UserCheck, ShieldAlert, Plus, ToggleLeft, ToggleRight, Trash2, GitMerge, FileDown, Radio, Camera, RefreshCw, Sparkles, CheckCircle2, GraduationCap, Pencil } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -57,7 +57,6 @@ export default function AdminDashboard() {
   const [mergeTeamA, setMergeTeamA] = useState('');
   const [mergeTeamB, setMergeTeamB] = useState('');
 
-  // Broadcast Notification State
   const [broadcastForm, setBroadcastForm] = useState({
     recipientType: 'all',
     recipientTarget: '',
@@ -66,6 +65,135 @@ export default function AdminDashboard() {
     channel: 'email'
   });
   const [broadcastLoading, setBroadcastLoading] = useState(false);
+
+  // Colleges Management State
+  const [collegesList, setCollegesList] = useState<any[]>([]);
+  const [collegesLoading, setCollegesLoading] = useState(false);
+  const [editingCollege, setEditingCollege] = useState<{ id: string; name: string } | null>(null);
+  const [newCollegeNameInput, setNewCollegeNameInput] = useState('');
+  const [addCollegeInput, setAddCollegeInput] = useState('');
+  const [showAddCollegeModal, setShowAddCollegeModal] = useState(false);
+  const [editingUserCollege, setEditingUserCollege] = useState<{ id: string; name: string; college: string } | null>(null);
+  const [userCollegeInput, setUserCollegeInput] = useState('');
+
+  const fetchColleges = async () => {
+    setCollegesLoading(true);
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/colleges');
+      if (res.ok) {
+        const list = await res.json();
+        setCollegesList(list);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCollegesLoading(false);
+    }
+  };
+
+  const handleAddCollege = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addCollegeInput.trim()) return;
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/admin/colleges', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: addCollegeInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast('College added successfully!', 'success');
+        setAddCollegeInput('');
+        setShowAddCollegeModal(false);
+        fetchColleges();
+      } else {
+        addToast(data.message || 'Failed to add college', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Server error adding college', 'error');
+    }
+  };
+
+  const handleSaveEditCollege = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCollege || !newCollegeNameInput.trim()) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/admin/colleges/${editingCollege.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ name: newCollegeNameInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast(`College updated! Updated ${data.updatedUsers || 0} user(s) & ${data.updatedTeams || 0} team(s).`, 'success');
+        setEditingCollege(null);
+        setNewCollegeNameInput('');
+        fetchColleges();
+        fetchParticipants();
+        fetchAdminStats();
+      } else {
+        addToast(data.message || 'Failed to update college', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Server error updating college', 'error');
+    }
+  };
+
+  const handleDeleteCollege = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}" from Colleges list?`)) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/admin/colleges/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        addToast('College deleted from list.', 'info');
+        fetchColleges();
+      } else {
+        const data = await res.json();
+        addToast(data.message || 'Failed to delete college', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Server error deleting college', 'error');
+    }
+  };
+
+  const handleSaveUserCollege = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUserCollege || !userCollegeInput.trim()) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/admin/users/${editingUserCollege.id}/college`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ college: userCollegeInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        addToast(`Updated college for ${editingUserCollege.name} to "${data.user.college}"`, 'success');
+        setEditingUserCollege(null);
+        setUserCollegeInput('');
+        fetchParticipants();
+        fetchColleges();
+      } else {
+        addToast(data.message || 'Failed to update participant college', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      addToast('Server error updating user college', 'error');
+    }
+  };
 
   // 1. Fetch Analytics Stats
   const fetchAdminStats = async () => {
@@ -151,6 +279,7 @@ export default function AdminDashboard() {
       if (activeTab === 'qr') fetchParticipants(); // Need user list for scanner select
       if (activeTab === 'coupons') fetchCoupons();
       if (activeTab === 'teams') fetchAdminTeams();
+      if (activeTab === 'colleges') fetchColleges();
     }
   }, [activeTab, user, participantSearch]);
 
@@ -472,6 +601,18 @@ export default function AdminDashboard() {
           </button>
 
           <button
+            onClick={() => setActiveTab('colleges')}
+            className={`w-full py-3 px-4 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer ${
+              activeTab === 'colleges'
+                ? 'bg-purple-500/10 border border-purple-500/20 text-white shadow-inner'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
+            }`}
+          >
+            <GraduationCap className="h-4.5 w-4.5 text-cyan-400" />
+            Colleges List
+          </button>
+
+          <button
             onClick={() => setActiveTab('teams')}
             className={`w-full py-3 px-4 rounded-xl text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer ${
               activeTab === 'teams'
@@ -652,7 +793,19 @@ export default function AdminDashboard() {
                           <td className="px-5 py-4 font-bold text-zinc-200">{item.name}</td>
                           <td className="px-5 py-4 space-y-0.5">
                             <span className="block text-zinc-300 font-mono text-[10px]">{item.email}</span>
-                            <span className="block text-zinc-500 text-[10px]">{item.college}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="block text-zinc-500 text-[10px]">{item.college}</span>
+                              <button
+                                onClick={() => {
+                                  setEditingUserCollege({ id: item.id, name: item.name, college: item.college });
+                                  setUserCollegeInput(item.college);
+                                }}
+                                title="Edit College Name"
+                                className="text-zinc-500 hover:text-blue-400 p-0.5 transition-colors cursor-pointer"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            </div>
                           </td>
                           <td className="px-5 py-4">
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-semibold ${
@@ -1187,6 +1340,233 @@ export default function AdminDashboard() {
                   <Radio className="h-4 w-4" />
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* --- SUBTAB 7: COLLEGES MANAGEMENT --- */}
+          {activeTab === 'colleges' && (
+            <div className="space-y-6 animate-[fadeIn_0.2s_ease-out] text-left">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-cyan-400" />
+                    Colleges Directory ({collegesList.length})
+                  </h2>
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Manage colleges in database. Any college added or edited here will automatically populate registration dropdowns.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setShowAddCollegeModal(true)}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add New College
+                </button>
+              </div>
+
+              {/* Colleges Table */}
+              <div className="glass-panel border-white/5 rounded-2xl overflow-x-auto custom-scrollbar">
+                <table className="w-full min-w-[600px] border-collapse text-xs text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 text-zinc-500 font-bold uppercase tracking-wider">
+                      <th className="px-5 py-4">#</th>
+                      <th className="px-5 py-4">College Name</th>
+                      <th className="px-5 py-4">Registered Attendees</th>
+                      <th className="px-5 py-4 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {collegesLoading ? (
+                      [1, 2, 3].map(r => (
+                        <tr key={r} className="border-b border-white/5 animate-pulse">
+                          <td className="px-5 py-4"><div className="h-4 bg-white/5 rounded w-8"></div></td>
+                          <td className="px-5 py-4"><div className="h-4 bg-white/5 rounded w-48"></div></td>
+                          <td className="px-5 py-4"><div className="h-4 bg-white/5 rounded w-16"></div></td>
+                          <td className="px-5 py-4"><div className="h-6 bg-white/5 rounded w-20 mx-auto"></div></td>
+                        </tr>
+                      ))
+                    ) : collegesList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="text-center py-12 text-zinc-500">
+                          No colleges found in database. Click "Add New College" above to create one.
+                        </td>
+                      </tr>
+                    ) : (
+                      collegesList.map((col, idx) => {
+                        const studentCount = participants.filter(p => (p.college || '').toLowerCase().trim() === (col.name || '').toLowerCase().trim()).length;
+                        return (
+                          <tr key={col.id} className="border-b border-white/5 hover:bg-white/[0.01] transition-colors">
+                            <td className="px-5 py-4 text-zinc-500 font-mono">{idx + 1}</td>
+                            <td className="px-5 py-4 font-bold text-zinc-200">
+                              {col.name}
+                            </td>
+                            <td className="px-5 py-4">
+                              <span className="px-2.5 py-1 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-full font-mono text-[10px]">
+                                {studentCount} student{studentCount === 1 ? '' : 's'}
+                              </span>
+                            </td>
+                            <td className="px-5 py-4 text-center space-x-2">
+                              <button
+                                onClick={() => {
+                                  setEditingCollege({ id: col.id, name: col.name });
+                                  setNewCollegeNameInput(col.name);
+                                }}
+                                title="Edit College Name"
+                                className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-lg text-xxs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Pencil className="h-3 w-3" />
+                                Edit Name
+                              </button>
+                              <button
+                                onClick={() => handleDeleteCollege(col.id, col.name)}
+                                title="Delete College"
+                                className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-xxs font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Edit College Modal */}
+          {editingCollege && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="glass-panel border-white/10 rounded-2xl p-6 max-w-md w-full text-left space-y-4 animate-[scaleUp_0.2s_ease-out]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-blue-400" />
+                  Edit College Name
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Updating this college name will automatically rename it in the Colleges Database and update all existing registered students & teams under this college.
+                </p>
+
+                <form onSubmit={handleSaveEditCollege} className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1">College Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCollegeNameInput}
+                      onChange={(e) => setNewCollegeNameInput(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-[#050514] text-white text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCollege(null)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg transition-all cursor-pointer"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Participant College Modal */}
+          {editingUserCollege && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="glass-panel border-white/10 rounded-2xl p-6 max-w-md w-full text-left space-y-4 animate-[scaleUp_0.2s_ease-out]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-purple-400" />
+                  Edit Participant College
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Update college name for <strong className="text-white">{editingUserCollege.name}</strong>. If the college name is new, it will also be added to the Colleges list.
+                </p>
+
+                <form onSubmit={handleSaveUserCollege} className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1">College Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={userCollegeInput}
+                      onChange={(e) => setUserCollegeInput(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-[#050514] text-white text-xs focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingUserCollege(null)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-500 shadow-lg transition-all cursor-pointer"
+                    >
+                      Save Participant College
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Add College Modal */}
+          {showAddCollegeModal && (
+            <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="glass-panel border-white/10 rounded-2xl p-6 max-w-md w-full text-left space-y-4 animate-[scaleUp_0.2s_ease-out]">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-emerald-400" />
+                  Add New College
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Enter the official college name. It will immediately appear in registration dropdowns for all students.
+                </p>
+
+                <form onSubmit={handleAddCollege} className="space-y-4 pt-2">
+                  <div>
+                    <label className="block text-[10px] text-zinc-500 uppercase font-bold mb-1">College Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Audisankara College of Engineering & Technology"
+                      value={addCollegeInput}
+                      onChange={(e) => setAddCollegeInput(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-[#050514] text-white text-xs focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCollegeModal(false)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg transition-all cursor-pointer"
+                    >
+                      Add College
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
