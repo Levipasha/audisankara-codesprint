@@ -147,7 +147,13 @@ export default function LoginPage() {
           }
         }, 1000);
       } else {
-        setMessage({ text: data.message || 'Bypass login failed.', type: 'error' });
+        const userEmail = bypassEmail.trim();
+        const regUrl = `/register?email=${encodeURIComponent(userEmail)}`;
+        setMessage({
+          text: data.message || 'Bypass login failed.',
+          type: 'error',
+          registerUrl: res.status === 404 ? regUrl : undefined
+        });
       }
     } catch {
       setMessage({ text: 'Could not connect to server. Is the backend running?', type: 'error' });
@@ -178,7 +184,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sign in to CodeSprint-2026</h1>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-              Use your Google account to access your dashboard,<br />register, and manage your team.
+              Use your Google account or email bypass to access your dashboard,<br />register, and manage your team.
             </p>
           </div>
 
@@ -226,19 +232,19 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Continue with Google'}
           </button>
 
-          {/* ── BYPASS LOGIN ── set BYPASS_ENABLED to true to re-enable ── */}
+          {/* ── EMAIL BYPASS LOGIN ── set BYPASS_ENABLED to true to re-enable ── */}
           {(false /* BYPASS_ENABLED */) && (<>
-          {/* Bypass Login for Testing */}
+          {/* Bypass Login for Instant Access / Testing */}
           <div className="relative my-5 flex py-1 items-center">
             <div className="flex-grow border-t border-slate-200"></div>
-            <span className="flex-shrink mx-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Or Tester Bypass</span>
+            <span className="flex-shrink mx-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Or Email Bypass</span>
             <div className="flex-grow border-t border-slate-200"></div>
           </div>
 
           <form onSubmit={handleBypassLogin} className="space-y-3.5">
             <div>
               <label htmlFor="bypass-email" className="block text-[11px] font-medium text-slate-500 mb-1.5 pl-1">
-                Registered Email
+                Registered Email Address
               </label>
               <input
                 id="bypass-email"
@@ -258,7 +264,7 @@ export default function LoginPage() {
               {loading ? (
                 <Loader className="h-4 w-4 animate-spin" />
               ) : (
-                'Sign In Instantly'
+                'Sign In via Email'
               )}
             </button>
           </form>

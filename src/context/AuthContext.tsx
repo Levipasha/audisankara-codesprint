@@ -30,6 +30,8 @@ export interface User {
   tshirtSize?: 'S' | 'M' | 'L' | 'XL' | 'XXL';
   checkedIn: boolean;
   checkInTime?: string;
+  collegeUpdated?: boolean;
+  collegeUpdatedByLeader?: boolean;
   createdAt: string;
 }
 

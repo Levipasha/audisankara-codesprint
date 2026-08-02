@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { motion } from 'framer-motion';
-import { Bell, Menu, X, LogOut, LayoutDashboard, Settings, User } from 'lucide-react';
+import { Bell, Menu, X, LogOut, LayoutDashboard, Settings, User, Download, Sparkles, MessageSquare, ExternalLink } from 'lucide-react';
 
 interface Notification {
   id: string;
@@ -225,7 +225,20 @@ export default function Navbar() {
           </ul>
 
           {/* Right section - User Profile, Notifications */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {/* Bright Guidelines PDF download link */}
+            <a
+              href="/hackathon-guidelines.pdf"
+              download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold rounded-full text-xs flex items-center gap-1.5 shadow-md shadow-orange-500/20 hover:shadow-orange-500/30 transition-all cursor-pointer hover:scale-105 active:scale-95 border border-amber-300/40"
+              title="Download CodeSprint 2026 Guidelines PDF"
+            >
+              <Download className="h-3.5 w-3.5 text-yellow-200 animate-bounce" />
+              <span>Guidelines PDF</span>
+            </a>
+
             {user ? (
               <>
                 {/* Notification Dropdown Container */}

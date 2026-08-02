@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
-import { LayoutDashboard, Users, Ticket, Award, Calendar, Sparkles, CheckCircle2, ShieldAlert, Copy, ExternalLink, Plus, UserPlus, LogOut, Check, X, Shield, Download, Bell, HelpCircle, School, Loader, Trash2, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, Ticket, Award, Calendar, Sparkles, CheckCircle2, ShieldAlert, Copy, ExternalLink, Plus, UserPlus, LogOut, Check, X, Shield, Download, Bell, HelpCircle, School, Loader, Trash2, CreditCard, FileText, MessageSquare, Pencil } from 'lucide-react';
 import QRCode from 'qrcode';
 
 const loadRazorpayScript = () => {
@@ -146,6 +146,73 @@ export default function UserDashboard() {
   const [dashUtrLoading, setDashUtrLoading] = useState(false);
   const [dashUtrError, setDashUtrError] = useState('');
   const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
+
+  // College editing states for Team Leader (One-time edit per member)
+  const [editingCollegeMemberId, setEditingCollegeMemberId] = useState<string | null>(null);
+  const [editingCollegeName, setEditingCollegeName] = useState('');
+  const [editingCollegeLoading, setEditingCollegeLoading] = useState(false);
+  const [editingCollegeError, setEditingCollegeError] = useState('');
+
+  const handleUpdateMemberCollege = async (targetUserId: string) => {
+    if (!editingCollegeName || !editingCollegeName.trim()) {
+      setEditingCollegeError('Please enter a valid college name.');
+      return;
+    }
+    setEditingCollegeLoading(true);
+    setEditingCollegeError('');
+    try {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/teams/update-member-college', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          targetUserId,
+          newCollege: editingCollegeName.trim()
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        addToast('College Updated', data.message || 'College name updated successfully.', 'success');
+        const updatedCollege = editingCollegeName.trim();
+        setEditingCollegeMemberId(null);
+        setEditingCollegeName('');
+
+        // Immediately update local state so edit pencil button disappears instantly
+        if (user) {
+          updateUser({ ...user, college: updatedCollege, collegeUpdated: true, collegeUpdatedByLeader: true } as any);
+        }
+        refreshUser();
+
+        setTeamDetails((prev: any) => {
+          if (!prev || !prev.members) return prev;
+          return {
+            ...prev,
+            college: targetUserId === prev.leaderId ? updatedCollege : prev.college,
+            members: prev.members.map((m: any) =>
+              m.id === targetUserId
+                ? { ...m, college: updatedCollege, collegeUpdatedByLeader: true, collegeUpdated: true }
+                : m
+            )
+          };
+        });
+
+        if (socket && teamDetails?.id) {
+          socket.emit('team_modified', teamDetails.id);
+        }
+
+        await fetchMyTeam();
+      } else {
+        setEditingCollegeError(data.message || 'Failed to update college name.');
+      }
+    } catch (err) {
+      console.error(err);
+      setEditingCollegeError('Server connection error.');
+    } finally {
+      setEditingCollegeLoading(false);
+    }
+  };
 
 
 
@@ -911,6 +978,48 @@ export default function UserDashboard() {
               </div>
             )}
 
+            {/* Light Guidelines Download Box for Pending Participants */}
+            <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-rose-50/60 border border-amber-200/90 text-slate-800 text-center relative overflow-hidden shadow-sm">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-black text-amber-800 uppercase tracking-wide">
+                <Sparkles className="h-4 w-4 text-amber-600 animate-spin" style={{ animationDuration: '4s' }} />
+                <span>Hackathon Guidelines PDF</span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
+                Read official guidelines & rules for Audisankara University CodeSprint 2026.
+              </p>
+              <a
+                href="/hackathon-guidelines.pdf"
+                download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
+              >
+                <Download className="h-4 w-4 text-white" />
+                <span>Download Guidelines (PDF)</span>
+              </a>
+            </div>
+
+            {/* Light WhatsApp Group Box for Pending Participants */}
+            <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-green-50/60 border border-emerald-200/90 text-slate-800 text-center relative overflow-hidden shadow-sm">
+              <div className="flex items-center justify-center gap-1.5 text-xs font-black text-emerald-800 uppercase tracking-wide">
+                <MessageSquare className="h-4 w-4 text-emerald-600" />
+                <span>Official WhatsApp Group</span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
+                Join the CodeSprint 2026 WhatsApp community for live updates.
+              </p>
+              <a
+                href="https://chat.whatsapp.com/IA1BaLQ7gpu46RrbEz7mN7"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
+              >
+                <MessageSquare className="h-4 w-4 text-white" />
+                <span>Join WhatsApp Group</span>
+                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
+              </a>
+            </div>
+
             {/* Logout link */}
             <div className="mt-6 text-center">
               <button
@@ -940,7 +1049,64 @@ export default function UserDashboard() {
             <div className="absolute top-0 right-0 h-[2px] w-[50%] bg-gradient-to-r from-purple-500/50 to-blue-500/50" />
             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Attendee</span>
             <h2 className="text-sm font-bold text-slate-900 mt-0.5 truncate">{user.name}</h2>
-            <p className="text-xxs text-slate-500 mt-1 truncate">{user.college}</p>
+            
+            <div className="mt-1">
+              <div className="flex items-center justify-between gap-1.5">
+                <p className="text-xxs text-slate-500 truncate max-w-[140px]" title={user.college}>{user.college || 'College N/A'}</p>
+                {!user.collegeUpdated && !user.collegeUpdatedByLeader && editingCollegeMemberId !== user.id && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCollegeMemberId(user.id);
+                      setEditingCollegeName(user.college || '');
+                      setEditingCollegeError('');
+                    }}
+                    title="Edit College Name (One-time edit)"
+                    className="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-250 transition-all cursor-pointer flex items-center gap-1 text-[9px] font-extrabold shrink-0"
+                  >
+                    <Pencil className="h-2.5 w-2.5 text-amber-600" />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </div>
+
+              {editingCollegeMemberId === user.id && (
+                <div className="mt-2 pt-2 border-t border-slate-200 flex flex-col gap-1.5 animate-[fadeIn_0.15s_ease-out]">
+                  <input
+                    type="text"
+                    value={editingCollegeName}
+                    onChange={(e) => setEditingCollegeName(e.target.value)}
+                    placeholder="Enter college name..."
+                    className="w-full px-2 py-1 bg-white border border-amber-300 rounded text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateMemberCollege(user.id)}
+                      disabled={editingCollegeLoading}
+                      className="flex-1 py-1 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded text-[10px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      {editingCollegeLoading ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span>Save</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCollegeMemberId(null);
+                        setEditingCollegeError('');
+                      }}
+                      className="px-2 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-[10px] font-bold transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {editingCollegeError && (
+                    <p className="text-[9px] text-rose-500 font-bold">{editingCollegeError}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {user.teamId && (
               <p className="text-xxs text-slate-500 mt-1">
                 Team ID: <span className="font-mono font-bold text-purple-600">{user.teamId}</span>
@@ -1007,6 +1173,62 @@ export default function UserDashboard() {
             <Award className={`h-4.5 w-4.5 ${activeTab === 'certificate' ? 'text-white' : 'text-amber-600'}`} />
             E-Certificates
           </button>
+
+          {/* Light Guidelines Sidebar Card */}
+          <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-rose-50/60 border border-amber-200/90 text-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="p-1.5 rounded-lg bg-amber-100/80 border border-amber-200/70">
+                <FileText className="h-4 w-4 text-amber-700" />
+              </span>
+              <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-800 flex items-center gap-1">
+                Must Read <Sparkles className="h-3 w-3 text-amber-500" />
+              </span>
+            </div>
+            <h4 className="text-xs font-black text-slate-900 leading-tight">
+              Hackathon Guidelines
+            </h4>
+            <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
+              Official rules & event details PDF for all participants.
+            </p>
+            <a
+              href="/hackathon-guidelines.pdf"
+              download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Download className="h-3.5 w-3.5 text-white" />
+              <span>Download PDF</span>
+            </a>
+          </div>
+
+          {/* Light WhatsApp Group Sidebar Card */}
+          <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-green-50/60 border border-emerald-200/90 text-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="p-1.5 rounded-lg bg-emerald-100/80 border border-emerald-200/70">
+                <MessageSquare className="h-4 w-4 text-emerald-700" />
+              </span>
+              <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-800 flex items-center gap-1">
+                WhatsApp Community <Sparkles className="h-3 w-3 text-emerald-500" />
+              </span>
+            </div>
+            <h4 className="text-xs font-black text-slate-900 leading-tight">
+              Official WhatsApp Group
+            </h4>
+            <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
+              Connect with fellow participants & get instant announcement alerts.
+            </p>
+            <a
+              href="https://chat.whatsapp.com/IA1BaLQ7gpu46RrbEz7mN7"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-white" />
+              <span>Join WhatsApp Group</span>
+              <ExternalLink className="h-3 w-3 opacity-80" />
+            </a>
+          </div>
         </aside>
 
         {/* Right Side Content Panel */}
@@ -1016,17 +1238,17 @@ export default function UserDashboard() {
           {!user.teamId && pendingInvites.length > 0 && (
             <div className="mb-6 space-y-3 animate-[fadeIn_0.2s_ease-out]">
               {pendingInvites.map(inv => (
-                <div key={inv.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-purple-600 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
+                <div key={inv.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-purple-600 shadow-sm overflow-hidden">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center shrink-0">
                       <Bell className="h-5 w-5 text-purple-600" />
                     </div>
-                    <div className="text-left">
+                    <div className="text-left min-w-0 flex-1">
                       <span className="text-[10px] text-slate-505 font-bold uppercase tracking-wider block">Pending Team Invite</span>
-                      <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                      <h4 className="text-sm font-bold text-slate-900 mt-0.5 break-words">
                         You're invited to join <span className="text-purple-650 font-extrabold">{inv.teamName}</span>
                       </h4>
-                      <p className="text-xxs text-slate-500 mt-0.5">Invited by {inv.leaderName} ({inv.inviteeEmail})</p>
+                      <p className="text-xxs text-slate-500 mt-0.5 truncate">{inv.leaderName} ({inv.inviteeEmail})</p>
                     </div>
                   </div>
                   <div className="flex gap-2 self-end sm:self-center">
@@ -1058,7 +1280,8 @@ export default function UserDashboard() {
           {activeTab === 'overview' && (
             <div className="space-y-6 animate-[fadeIn_0.2s_ease-out]">
               {/* Event updates banners */}
-              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+              <div className="bg-white border border-slate-200/80 rounded-2xl p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500" />
                 <div>
                   <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
                     Welcome to CodeSprint-2026!
@@ -1068,19 +1291,34 @@ export default function UserDashboard() {
                     Your registration has been completed. Join a team or create one below to start preparation. KVT Hall check-in desk will open on Saturday, August 8 at 09:00 AM.
                   </p>
                 </div>
-                {user.paymentStatus === 'paid' ? (
-                  <div className="flex-shrink-0 self-start md:self-center px-4 py-2 border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Entry Confirmed
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => router.push('/register')}
-                    className="flex-shrink-0 self-start md:self-center px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 font-bold rounded-xl text-xs transition-all cursor-pointer shadow-sm"
+
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                  {/* Clean Guidelines Download Button */}
+                  <a
+                    href="/hackathon-guidelines.pdf"
+                    download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
                   >
-                    Complete Payment
-                  </button>
-                )}
+                    <Download className="h-4 w-4 text-white" />
+                    <span>Download Guidelines PDF</span>
+                  </a>
+
+                  {user.paymentStatus === 'paid' ? (
+                    <div className="flex-shrink-0 px-4 py-2.5 border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Entry Confirmed
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => router.push('/register')}
+                      className="flex-shrink-0 px-4 py-2.5 bg-slate-900 text-white hover:bg-slate-800 font-bold rounded-xl text-xs transition-all cursor-pointer shadow-sm"
+                    >
+                      Complete Payment
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Layout grid cards */}
@@ -1275,30 +1513,30 @@ export default function UserDashboard() {
                   {teamLoading || !teamDetails ? (
                     <div className="bg-white border border-slate-200/80 p-6 rounded-2xl animate-pulse h-32" />
                   ) : (
-                    <div className="bg-white border border-slate-200 p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm">
+                    <div className="bg-white border border-slate-200 p-5 sm:p-6 rounded-2xl relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 shadow-sm text-left">
                       <div className="absolute top-0 right-0 h-[2px] w-[60%] bg-gradient-to-r from-purple-500/50 to-blue-500/50" />
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h1 className="text-xl font-bold text-slate-900 tracking-tight">{teamDetails.name}</h1>
-                          <span className="text-[9px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                      <div className="space-y-1.5 min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h1 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight break-words">{teamDetails.name}</h1>
+                          <span className="text-[9px] bg-purple-50 border border-purple-200 text-purple-700 font-bold px-2 py-0.5 rounded-full uppercase tracking-wider font-mono shrink-0">
                             ID: {teamDetails.id}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 max-w-xl leading-relaxed">{teamDetails.description}</p>
-                        <p className="text-xxs text-slate-500 mt-2 flex items-center gap-1">
-                          <School className="h-3.5 w-3.5 text-purple-650" />
-                          College Restriction: <strong className="text-slate-700 font-bold">{teamDetails.college}</strong>
+                        <p className="text-xs text-slate-600 max-w-xl leading-relaxed break-words">{teamDetails.description}</p>
+                        <p className="text-xxs text-slate-500 mt-2 flex flex-wrap items-center gap-1">
+                          <School className="h-3.5 w-3.5 text-purple-650 shrink-0" />
+                          <span>College Restriction:</span> <strong className="text-slate-700 font-bold break-words">{teamDetails.college}</strong>
                         </p>
                       </div>
-                      <div className="flex-shrink-0 flex flex-col items-end gap-1.5">
+                      <div className="shrink-0 flex flex-col items-start md:items-end gap-1.5 pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
                         <span className="text-xxs text-slate-500 uppercase tracking-widest font-bold">Team Completion</span>
                         <div className="flex items-center gap-2">
-                          <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                          <div className="w-28 sm:w-24 h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                             <div className="h-full bg-gradient-to-r from-purple-500 to-blue-500" style={{ width: `${completionPercentage}%` }}></div>
                           </div>
                           <span className="text-xs font-bold text-slate-800 font-mono">{completionPercentage}%</span>
                         </div>
-                        <span className="text-[10px] text-slate-500 mt-1">({teamDetails.members.length} / 5 Members)</span>
+                        <span className="text-[10px] text-slate-500 mt-0.5">({teamDetails.members.length} / 5 Members)</span>
                       </div>
                     </div>
                   )}
@@ -1325,14 +1563,14 @@ export default function UserDashboard() {
                   )}
 
                   {/* Team Members List */}
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-                    <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-sm overflow-hidden">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-2 border-b border-slate-100">
                       <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                         <Users className="h-4.5 w-4.5 text-slate-400" />
                         Team Members List
                       </h3>
                       {user.id === teamDetails?.leaderId && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
                           <button
                             type="button"
                             onClick={() => {
@@ -1354,7 +1592,7 @@ export default function UserDashboard() {
                               setShowAddMemberModal(true);
                             }}
                             disabled={teamDetails.members.length >= 5}
-                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-[0.98] flex items-center gap-1"
+                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-[0.98] flex items-center gap-1 shrink-0"
                           >
                             <UserPlus className="h-3.5 w-3.5" />
                             <span>Add Member ({teamDetails.members.length} / 5)</span>
@@ -1369,40 +1607,102 @@ export default function UserDashboard() {
                         return (
                           <div
                             key={member.id}
-                            className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/60 transition-colors"
+                            className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100/60 transition-colors space-y-2.5 overflow-hidden"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center font-bold text-purple-700 uppercase">
-                                {member.name.substring(0, 2)}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-9 h-9 shrink-0 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center font-bold text-purple-700 uppercase">
+                                  {member.name.substring(0, 2)}
+                                </div>
+                                <div className="text-left min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                    <h4 className="text-xs font-bold text-slate-800 break-words max-w-full">
+                                      {member.name}
+                                    </h4>
+                                    {isMe && <span className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-normal shrink-0">You</span>}
+                                    {isLeader && <span className="text-[9px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-normal shrink-0">Leader</span>}
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 flex flex-wrap items-center gap-1.5 leading-snug">
+                                    <span className="truncate max-w-[160px] sm:max-w-[200px]">{member.email}</span>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="font-semibold text-slate-700 truncate max-w-[180px]" title={member.college}>{member.college || 'College N/A'}</span>
+                                  </p>
+                                </div>
                               </div>
-                              <div className="text-left">
-                                <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                  {member.name}
-                                  {isMe && <span className="text-[9px] bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded font-normal">You</span>}
-                                  {isLeader && <span className="text-[9px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-normal">Leader</span>}
-                                </h4>
-                                <p className="text-[10px] text-slate-500 truncate max-w-[200px]">{member.email}</p>
+                              <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                                  {/* One-time Pencil Edit Button (for Leader or Member self) */}
+                                  {(user.id === teamDetails.leaderId || user.id === member.id) && !member.collegeUpdatedByLeader && !(member as any).collegeUpdated && editingCollegeMemberId !== member.id && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingCollegeMemberId(member.id);
+                                        setEditingCollegeName(member.college || '');
+                                        setEditingCollegeError('');
+                                      }}
+                                      title="Edit College Name (One-time edit for Leader)"
+                                      className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-250 transition-all cursor-pointer hover:scale-105 active:scale-95 flex items-center gap-1 text-[10px] font-extrabold shrink-0"
+                                    >
+                                      <Pencil className="h-3 w-3 text-amber-600" />
+                                      <span>Edit College</span>
+                                    </button>
+                                  )}
+
+                                  {member.paymentStatus === 'pending' ? (
+                                    <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold">
+                                      Unpaid / Pending Checkout
+                                    </span>
+                                  ) : member.paymentStatus === 'submitted' ? (
+                                    <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-250 px-2 py-0.5 rounded-full font-bold animate-pulse">
+                                      Pending Admin Approval
+                                    </span>
+                                  ) : member.profileCompleted === false ? (
+                                    <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+                                      Profile Incomplete
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                                      Profile Completed
+                                    </span>
+                                  )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                {member.paymentStatus === 'pending' ? (
-                                  <span className="text-[9px] bg-rose-50 text-rose-700 border border-rose-200 px-2 py-0.5 rounded-full font-bold">
-                                    Unpaid / Pending Checkout
-                                  </span>
-                               ) : member.paymentStatus === 'submitted' ? (
-                                 <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-250 px-2 py-0.5 rounded-full font-bold animate-pulse">
-                                   Pending Admin Approval
-                                 </span>
-                               ) : member.profileCompleted === false ? (
-                                 <span className="text-[9px] bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-                                   Profile Incomplete
-                                 </span>
-                               ) : (
-                                 <span className="text-[9px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
-                                   Profile Completed
-                                 </span>
-                               )}
-                            </div>
+
+                            {/* Inline College Name Editor for Team Leader */}
+                            {editingCollegeMemberId === member.id && (
+                              <div className="mt-2 pt-2.5 border-t border-slate-200/70 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 animate-[fadeIn_0.15s_ease-out]">
+                                <input
+                                  type="text"
+                                  value={editingCollegeName}
+                                  onChange={(e) => setEditingCollegeName(e.target.value)}
+                                  placeholder="Enter correct college name..."
+                                  className="flex-1 px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                                />
+                                <div className="flex items-center gap-1.5 justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateMemberCollege(member.id)}
+                                    disabled={editingCollegeLoading}
+                                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white rounded-lg text-xs font-bold transition-all shadow-sm active:scale-95 flex items-center gap-1 cursor-pointer"
+                                  >
+                                    {editingCollegeLoading ? <Loader className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                                    <span>Save College</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingCollegeMemberId(null);
+                                      setEditingCollegeError('');
+                                    }}
+                                    className="px-2.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                                {editingCollegeError && (
+                                  <p className="text-[10px] text-rose-500 font-bold w-full">{editingCollegeError}</p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })}

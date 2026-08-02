@@ -116,12 +116,8 @@ function RegisterForm() {
 
   const getFilteredColleges = (query: string) => {
     const q = (query || '').toLowerCase().trim();
-    let filtered = colleges.filter((c: any) => c.name.toLowerCase().includes(q));
-    filtered = filtered.slice(0, 15);
-    if (!filtered.some((c: any) => c.name.toLowerCase().trim() === 'other')) {
-      filtered.push({ id: 'other_option', name: 'Other' });
-    }
-    return filtered;
+    const filtered = colleges.filter((c: any) => c.name.toLowerCase().includes(q));
+    return filtered.slice(0, 15);
   };
 
   const [customLeaderCollege, setCustomLeaderCollege] = useState('');
@@ -640,7 +636,16 @@ function RegisterForm() {
       const finalPayablePrice = getFinalPrice();
       const payingQuantity = Math.max(0, Math.round(finalPayablePrice / 399));
 
-      // Generate Razorpay order on the backend publicly
+      const registrationDetails = {
+        teamName: teamName.trim(),
+        teamCode: teamCode.trim(),
+        leader: leaderPayload,
+        members: addedMembers,
+        teamStatus: availabilityMode,
+        availableSlots: availabilityMode === 'OPEN' ? selectedAvailableSlots : 0
+      };
+
+      // Generate Razorpay order on the backend publicly with pre-validation
       const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -649,23 +654,15 @@ function RegisterForm() {
           quantity: payingQuantity,
           email: leaderPayload.email,
           emails: [leaderPayload.email, ...addedMembers.map(m => m.email)],
-          amount: finalPayablePrice
+          teamName: teamName.trim(),
+          amount: finalPayablePrice,
+          registrationDetails
         })
       });
 
       const orderData = await orderRes.json();
       if (orderRes.ok) {
         setCreatedOrder(orderData);
-        
-        const registrationDetails = {
-          teamName: teamName.trim(),
-          teamCode: teamCode.trim(),
-          leader: leaderPayload,
-          members: addedMembers,
-          teamStatus: availabilityMode,
-          availableSlots: availabilityMode === 'OPEN' ? selectedAvailableSlots : 0
-        };
-
         await handleRazorpayRegistrationPayment(orderData, leaderPayload, 'TEAM', registrationDetails);
       } else {
         setErrorMsg(orderData.message || 'Failed to create payment order.');
@@ -737,7 +734,10 @@ function RegisterForm() {
           quantity: payingQuantity,
           email: individualPayload.email,
           emails: [individualPayload.email],
-          amount: finalPayablePrice
+          phone: individualPayload.phone,
+          rollNumber: individualPayload.rollNumber,
+          amount: finalPayablePrice,
+          registrationDetails: individualPayload
         })
       });
 
