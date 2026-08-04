@@ -186,6 +186,34 @@ export default function LandingPage() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
+  const [regTimeLeft, setRegTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, isClosed: false });
+
+  // Registration Closing Countdown (August 05, 2026 at 11:59:59 PM IST)
+  useEffect(() => {
+    const regDeadline = new Date('2026-08-05T23:59:59+05:30').getTime();
+
+    const updateRegTimer = () => {
+      const now = new Date().getTime();
+      const difference = regDeadline - now;
+
+      if (difference <= 0) {
+        setRegTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isClosed: true });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setRegTimeLeft({ days, hours, minutes, seconds, isClosed: false });
+    };
+
+    updateRegTimer();
+    const timer = setInterval(updateRegTimer, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Countdown timer logic targeting August 08, 2026 at 09:00 AM
   useEffect(() => {
     const targetDate = new Date('2026-08-08T09:00:00+05:30').getTime();
@@ -252,13 +280,23 @@ export default function LandingPage() {
 
             {/* Call to Actions */}
             <div className="flex flex-wrap gap-4">
-              <Link
-                href="/register"
-                className="group relative px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center gap-1.5 cursor-pointer"
-              >
-                <span className="relative z-10">REGISTER NOW</span>
-                <ArrowRight className="h-4 w-4 relative z-10" />
-              </Link>
+              {!regTimeLeft.isClosed ? (
+                <Link
+                  href="/register"
+                  className="group relative px-6 py-3.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center gap-1.5 cursor-pointer shadow-purple-200"
+                >
+                  <span className="relative z-10">REGISTER NOW</span>
+                  <ArrowRight className="h-4 w-4 relative z-10" />
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="px-6 py-3.5 bg-slate-200 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-not-allowed border border-slate-300 opacity-90"
+                >
+                  <span>REGISTRATIONS CLOSED</span>
+                  <X className="h-4 w-4 text-slate-400" />
+                </button>
+              )}
               <Link
                 href="/teams"
                 className="group relative px-6 py-3.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-xl font-bold text-xs overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-sm flex items-center gap-1.5 cursor-pointer shadow-inner"
@@ -324,6 +362,72 @@ export default function LandingPage() {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      {/* Registration Cutoff Timer Banner */}
+      <section className="py-10 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white shadow-xl relative overflow-hidden">
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
+          {!regTimeLeft.isClosed ? (
+            <>
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40 text-xs font-bold uppercase tracking-widest mb-3 animate-pulse">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Registrations Closing Soon</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white mb-2">
+                Registration Deadline: Wednesday, August 05, 2026 at 11:59 PM IST
+              </h2>
+              <p className="text-xs text-purple-200 mb-6">
+                Clock is ticking! Register your team before midnight tomorrow to secure your slot.
+              </p>
+
+              <div className="grid grid-cols-4 gap-3 sm:gap-6 max-w-md mx-auto mb-6">
+                <div className="flex flex-col items-center p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                  <span className="text-2xl sm:text-4xl font-extrabold text-amber-300 font-mono">{String(regTimeLeft.days).padStart(2, '0')}</span>
+                  <span className="text-[10px] text-purple-200 capitalize mt-1 font-bold">Days</span>
+                </div>
+                <div className="flex flex-col items-center p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                  <span className="text-2xl sm:text-4xl font-extrabold text-amber-300 font-mono">{String(regTimeLeft.hours).padStart(2, '0')}</span>
+                  <span className="text-[10px] text-purple-200 capitalize mt-1 font-bold">Hours</span>
+                </div>
+                <div className="flex flex-col items-center p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                  <span className="text-2xl sm:text-4xl font-extrabold text-amber-300 font-mono">{String(regTimeLeft.minutes).padStart(2, '0')}</span>
+                  <span className="text-[10px] text-purple-200 capitalize mt-1 font-bold">Minutes</span>
+                </div>
+                <div className="flex flex-col items-center p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-lg">
+                  <span className="text-2xl sm:text-4xl font-extrabold text-amber-300 font-mono">{String(regTimeLeft.seconds).padStart(2, '0')}</span>
+                  <span className="text-[10px] text-purple-200 capitalize mt-1 font-bold">Seconds</span>
+                </div>
+              </div>
+
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-2 px-8 py-3.5 bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-slate-950 font-black rounded-xl text-sm shadow-xl shadow-orange-500/20 hover:scale-105 transition-all cursor-pointer"
+              >
+                <span>REGISTER NOW BEFORE MIDNIGHT</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </>
+          ) : (
+            <div className="py-4">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-bold uppercase tracking-widest mb-3">
+                <ShieldAlert className="h-4 w-4 text-rose-400" />
+                <span>Registrations Officially Closed</span>
+              </div>
+              <h2 className="text-2xl font-black text-white mb-2">
+                CodeSprint 2026 Registration Has Ended
+              </h2>
+              <p className="text-xs text-slate-300 max-w-lg mx-auto mb-4">
+                The official registration cutoff date was Wednesday, August 05, 2026 at 11:59 PM IST. Thank you to all registered participants!
+              </p>
+              <button
+                disabled
+                className="px-6 py-2.5 bg-white/10 text-slate-400 border border-white/20 rounded-xl text-xs font-bold cursor-not-allowed"
+              >
+                REGISTRATIONS CLOSED
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

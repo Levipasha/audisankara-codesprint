@@ -1026,6 +1026,41 @@ function RegisterForm() {
 
 
 
+  const isRegClosed = Date.now() >= new Date('2026-08-05T23:59:59+05:30').getTime();
+
+  if (isRegClosed && (!user || user.paymentStatus !== 'paid')) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-2xl text-center space-y-6">
+          <div className="h-16 w-16 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mx-auto">
+            <ShieldAlert className="h-8 w-8" />
+          </div>
+          <div>
+            <span className="text-xs font-bold text-rose-600 uppercase tracking-widest font-mono">Registration Ended</span>
+            <h1 className="text-2xl font-black text-slate-900 mt-1">Registrations Officially Closed</h1>
+          </div>
+          <p className="text-slate-600 text-xs leading-relaxed">
+            The registration window for <strong>CodeSprint 2026</strong> officially closed on <strong>Wednesday, August 5, 2026 at 11:59 PM IST</strong>.
+          </p>
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-left text-xs text-amber-800 space-y-1">
+            <p className="font-bold">⏰ In-Flight Payment Grace Period:</p>
+            <p className="text-[11px] leading-relaxed">
+              If you initiated a payment order before 11:59 PM, your payment verification window will remain open for 15 minutes (until 12:15 AM).
+            </p>
+          </div>
+          <div className="pt-4 border-t border-slate-100 flex gap-3">
+            <button
+              onClick={() => router.push('/')}
+              className="w-full py-3 bg-slate-900 text-white font-bold text-xs rounded-xl hover:bg-slate-800 transition-colors"
+            >
+              Back to Home Page
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Render Entry Screen Selection
   if (regMode === 'selection') {
     return (

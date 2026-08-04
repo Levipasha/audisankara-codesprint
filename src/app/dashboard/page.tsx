@@ -1234,6 +1234,32 @@ export default function UserDashboard() {
         {/* Right Side Content Panel */}
         <main className="flex-1 min-h-[450px]">
           
+          {/* Registration Cutoff Announcement Notification */}
+          <div className="mb-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-5 border border-purple-800 shadow-md relative overflow-hidden text-left">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex-shrink-0 mt-0.5">
+                <Calendar className="h-5 w-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                    Official Announcement
+                  </span>
+                </div>
+                <h3 className="text-sm font-extrabold text-white">
+                  {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime()
+                    ? '⏰ Registration Deadline Notice: Closing Wednesday, August 05, 2026 at 11:59 PM IST'
+                    : '🔒 Notice: Registrations for CodeSprint 2026 Are Officially Closed'}
+                </h3>
+                <p className="text-xs text-purple-200 leading-relaxed">
+                  {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime()
+                    ? 'Please ensure all team member details and payments are completed before midnight tomorrow (Wednesday, Aug 05, 11:59 PM IST). No new registrations will be accepted after the cutoff.'
+                    : 'The official registration window closed on Wednesday, August 05, 2026 at 11:59 PM IST. Thank you for participating in CodeSprint 2026!'}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Pending Invites Banner (Teamless Users) */}
           {!user.teamId && pendingInvites.length > 0 && (
             <div className="mb-6 space-y-3 animate-[fadeIn_0.2s_ease-out]">
