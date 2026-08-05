@@ -329,20 +329,13 @@ export default function Navbar() {
                 >
                   Log In
                 </Link>
-                {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime() ? (
+                {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime() && (
                   <Link
                     href="/register"
                     className="text-xs font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 px-4 py-2 rounded-xl transition-all shadow-md shadow-purple-200 active:scale-[0.98] duration-200"
                   >
                     Register Now
                   </Link>
-                ) : (
-                  <button
-                    disabled
-                    className="text-xs font-bold text-slate-400 bg-slate-100 border border-slate-200 px-3 py-2 rounded-xl cursor-not-allowed"
-                  >
-                    Registrations Closed
-                  </button>
                 )}
               </div>
             )}

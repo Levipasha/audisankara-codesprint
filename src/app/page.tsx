@@ -288,14 +288,7 @@ export default function LandingPage() {
                   <span className="relative z-10">REGISTER NOW</span>
                   <ArrowRight className="h-4 w-4 relative z-10" />
                 </Link>
-              ) : (
-                <button
-                  disabled
-                  className="px-6 py-3.5 bg-slate-200 text-slate-500 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-not-allowed border border-slate-300 opacity-90"
-                >
-                  <span>REGISTRATIONS CLOSED</span>
-                  <X className="h-4 w-4 text-slate-400" />
-                </button>
+                null
               )}
               <Link
                 href="/teams"
@@ -420,12 +413,7 @@ export default function LandingPage() {
               <p className="text-xs text-slate-300 max-w-lg mx-auto mb-4">
                 The official registration cutoff date was Wednesday, August 05, 2026 at 11:59 PM IST. Thank you to all registered participants!
               </p>
-              <button
-                disabled
-                className="px-6 py-2.5 bg-white/10 text-slate-400 border border-white/20 rounded-xl text-xs font-bold cursor-not-allowed"
-              >
-                REGISTRATIONS CLOSED
-              </button>
+              {/* Registrations closed */}
             </div>
           )}
         </div>
