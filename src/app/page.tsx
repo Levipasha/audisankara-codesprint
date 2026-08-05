@@ -280,7 +280,7 @@ export default function LandingPage() {
 
             {/* Call to Actions */}
             <div className="flex flex-wrap gap-4">
-              {!regTimeLeft.isClosed ? (
+              {!regTimeLeft.isClosed && (
                 <Link
                   href="/register"
                   className="group relative px-6 py-3.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl font-bold text-xs overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg flex items-center gap-1.5 cursor-pointer shadow-purple-200"
@@ -288,7 +288,6 @@ export default function LandingPage() {
                   <span className="relative z-10">REGISTER NOW</span>
                   <ArrowRight className="h-4 w-4 relative z-10" />
                 </Link>
-                null
               )}
               <Link
                 href="/teams"
