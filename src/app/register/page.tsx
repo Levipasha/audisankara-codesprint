@@ -2068,16 +2068,32 @@ function RegisterForm() {
                     try {
                       let orderData = createdOrder;
                       if (!orderData) {
-                        const orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({
-                            registrationType: (regMode as string) === 'CREATE' ? 'TEAM' : 'INDIVIDUAL',
-                            quantity: (regMode as string) === 'CREATE' ? totalMembers : 1
-                          })
-                        });
+                        const activeToken = localStorage.getItem('codesprint_token');
+                        let orderRes;
+                        if (activeToken && user) {
+                          orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              Authorization: `Bearer ${activeToken}`
+                            },
+                            body: JSON.stringify({})
+                          });
+                        } else {
+                          const isLeader = Boolean(user && (user.role === 'team-leader' || user.teamRole === 'leader') && user.teamId);
+                          const payQuantity = (regMode as string) === 'CREATE' ? totalMembers : (isLeader ? (teamMemberCount || 5) : 1);
+                          orderRes = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/payments/create-order-public', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              registrationType: (regMode as string) === 'CREATE' || isLeader ? 'TEAM' : 'INDIVIDUAL',
+                              quantity: payQuantity
+                            })
+                          });
+                        }
+
                         if (orderRes.ok) {
                           orderData = await orderRes.json();
                           setCreatedOrder(orderData);
