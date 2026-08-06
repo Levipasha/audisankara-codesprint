@@ -16,12 +16,29 @@ function PayFrame() {
   const college      = searchParams.get('college') || '';
   const course       = searchParams.get('course') || '';
   const year         = searchParams.get('year') || '';
-  const amount       = searchParams.get('amount') || '399';
-
-  const { token, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [success, setSuccess] = useState(false);
+  const [displayAmount, setDisplayAmount] = useState<string>(searchParams.get('amount') || '399');
+
+  React.useEffect(() => {
+    if (user && (user.role === 'team-leader' || user.teamRole === 'leader') && user.teamId) {
+      const activeToken = token || localStorage.getItem('codesprint_token') || '';
+      fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/teams/my-team', {
+        headers: { Authorization: `Bearer ${activeToken}` }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.team && Array.isArray(data.team.members)) {
+          const unpaid = data.team.members.filter((m: any) => m.paymentStatus !== 'paid').length;
+          const count = unpaid > 0 ? unpaid : data.team.members.length;
+          setDisplayAmount(String(count * 399));
+        }
+      })
+      .catch(console.error);
+    }
+  }, [user, token]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -256,7 +273,7 @@ function PayFrame() {
                   </div>
                   <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>Hackathon Entry · CodeSprint 2026</div>
                 </div>
-                <div style={{ color: '#c4b5fd', fontSize: 26, fontWeight: 900, letterSpacing: '-0.03em' }}>₹{amount}</div>
+                <div style={{ color: '#c4b5fd', fontSize: 26, fontWeight: 900, letterSpacing: '-0.03em' }}>₹{displayAmount}</div>
               </div>
             </div>
 
@@ -288,7 +305,7 @@ function PayFrame() {
                 {loading ? (
                   <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Processing payment...</>
                 ) : (
-                  <><CreditCard size={18} /> Pay ₹{amount} Online</>
+                  <><CreditCard size={18} /> Pay ₹{displayAmount} Online</>
                 )}
               </button>
               <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>

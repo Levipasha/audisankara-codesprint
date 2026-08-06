@@ -231,7 +231,7 @@ function RegisterForm() {
   }, [user, router]);
 
   useEffect(() => {
-    if (user && user.role === 'team-leader' && user.teamId) {
+    if (user && (user.role === 'team-leader' || user.teamRole === 'leader') && user.teamId) {
       const activeToken = localStorage.getItem('codesprint_token');
       fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/teams/my-team', {
         headers: {
@@ -581,9 +581,10 @@ function RegisterForm() {
     }
   }, [totalMembers, selectedAvailableSlots]);
 
+  const isLeaderUser = Boolean(user && (user.role === 'team-leader' || user.teamRole === 'leader') && user.teamId);
   const basePrice = regMode === 'CREATE'
     ? totalMembers * 399
-    : (user && user.role === 'team-leader' && teamMemberCount ? teamMemberCount * 399 : 399);
+    : (isLeaderUser ? (teamMemberCount || 5) * 399 : 399);
   
   const ONE_TIME_FREE_EMAILS: string[] = [];
   const VIP_FREE_EMAILS: string[] = [];
