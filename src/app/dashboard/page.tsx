@@ -947,6 +947,17 @@ export default function UserDashboard() {
                   Thank you! Your UTR reference has been submitted. We'll verify it and activate your dashboard shortly.
                 </p>
               </div>
+            ) : user?.teamId && user?.teamRole === 'member' ? (
+              <div className="text-center space-y-2 mb-7">
+                <div className="inline-flex items-center gap-2 py-1.5 px-4 bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-extrabold uppercase rounded-full tracking-wider">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  Leader Payment Required
+                </div>
+                <h1 className="text-xl font-extrabold text-slate-900">Payment Managed by Team Leader</h1>
+                <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+                  Your team registration payment is managed by your <strong>Team Leader</strong>. Please ask your Team Leader to log in and complete the payment for your team.
+                </p>
+              </div>
             ) : (
               <div className="text-center space-y-2 mb-7">
                 <div className="inline-flex items-center gap-2 py-1.5 px-4 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-extrabold uppercase rounded-full tracking-wider">
@@ -960,8 +971,8 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {/* Pay via Razorpay button — shown for pending and rejected */}
-            {(user.paymentStatus === 'pending' || user.paymentStatus === 'rejected') && !dashUtrSuccess && (
+            {/* Pay via Razorpay button — shown for pending and rejected (only if not a non-leader team member) */}
+            {(user.paymentStatus === 'pending' || user.paymentStatus === 'rejected') && !(user?.teamId && user?.teamRole === 'member') && !dashUtrSuccess && (
               <div className="space-y-4 pt-2 text-center">
                 <button
                   onClick={handleDashboardPayment}
@@ -969,7 +980,7 @@ export default function UserDashboard() {
                   className="inline-flex items-center justify-center gap-2 py-3 px-6 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md transition-all w-full cursor-pointer"
                 >
                   <CreditCard className="h-3.5 w-3.5" />
-                  <span>{dashUtrLoading ? 'Processing...' : 'Pay ₹399 Online Now'}</span>
+                  <span>{dashUtrLoading ? 'Processing...' : 'Pay Online Now'}</span>
                 </button>
                 {dashUtrError && (
                   <p className="text-rose-500 text-xs pl-1">{dashUtrError}</p>
