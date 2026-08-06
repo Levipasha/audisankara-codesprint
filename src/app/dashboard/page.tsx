@@ -1623,36 +1623,7 @@ export default function UserDashboard() {
                         <Users className="h-4.5 w-4.5 text-slate-400" />
                         Team Members List
                       </h3>
-                      {user.id === teamDetails?.leaderId && (
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAddMemberForm({
-                                name: '',
-                                email: '',
-                                phone: '',
-                                rollNumber: '',
-                                college: '',
-                                branch: '',
-                                year: '1st Year',
-                                gender: 'Male',
-                                tshirtSize: 'M',
-                                foodPreference: 'Veg',
-                                utr: ''
-                              });
-                              setSessionMembers([]);
-                              setAddMemberStep('input');
-                              setShowAddMemberModal(true);
-                            }}
-                            disabled={teamDetails.members.length >= 5}
-                            className="px-3 py-1.5 bg-purple-600 hover:bg-purple-750 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm active:scale-[0.98] flex items-center gap-1 shrink-0"
-                          >
-                            <UserPlus className="h-3.5 w-3.5" />
-                            <span>Add Member ({teamDetails.members.length} / 5)</span>
-                          </button>
-                        </div>
-                      )}
+
                     </div>
                     <div className="space-y-3">
                       {teamDetails?.members.map((member: any) => {
