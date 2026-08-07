@@ -81,8 +81,9 @@ export default function ParticipantsPage() {
       const res = await fetch(`${API_URL}/api/public/participants?${params.toString()}`);
       if (res.ok) {
         const list = await res.json();
-        setParticipants(list);
-        if (!search) setTotalParticipants(list.length);
+        const cleanList = (Array.isArray(list) ? list : []).filter((p: any) => p && !p.hidden && (p.email || '').toLowerCase() !== 'vamshi.c2002@gmail.com');
+        setParticipants(cleanList);
+        if (!search) setTotalParticipants(cleanList.length);
       }
     } catch (err) { console.error('Error fetching participants:', err); }
     finally { setLoading(false); }
@@ -95,7 +96,11 @@ export default function ParticipantsPage() {
       const params = new URLSearchParams();
       if (soloSearch) params.append('search', soloSearch);
       const res = await fetch(`${API_URL}/api/public/solo-participants?${params.toString()}`);
-      if (res.ok) { const list = await res.json(); setSoloParticipants(list); }
+      if (res.ok) { 
+        const list = await res.json(); 
+        const cleanSolo = (Array.isArray(list) ? list : []).filter((p: any) => p && !p.hidden && (p.email || '').toLowerCase() !== 'vamshi.c2002@gmail.com');
+        setSoloParticipants(cleanSolo); 
+      }
     } catch (err) { console.error('Error fetching solo participants:', err); }
     finally { setSoloLoading(false); }
   };

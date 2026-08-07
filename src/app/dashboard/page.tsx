@@ -1262,31 +1262,7 @@ export default function UserDashboard() {
         {/* Right Side Content Panel */}
         <main className="flex-1 min-h-[450px]">
           
-          {/* Registration Cutoff Announcement Notification */}
-          <div className="mb-6 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-2xl p-5 border border-purple-800 shadow-md relative overflow-hidden text-left">
-            <div className="flex items-start gap-3.5">
-              <div className="p-2.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30 flex-shrink-0 mt-0.5">
-                <Calendar className="h-5 w-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-amber-300 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-                    Official Announcement
-                  </span>
-                </div>
-                <h3 className="text-sm font-extrabold text-white">
-                  {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime()
-                    ? '⏰ Registration Deadline Notice: Closing Wednesday, August 05, 2026 at 11:59 PM IST'
-                    : '🔒 Notice: Registrations for CodeSprint 2026 Are Officially Closed'}
-                </h3>
-                <p className="text-xs text-purple-200 leading-relaxed">
-                  {Date.now() < new Date('2026-08-05T23:59:59+05:30').getTime()
-                    ? 'Please ensure all team member details and payments are completed before midnight tomorrow (Wednesday, Aug 05, 11:59 PM IST). No new registrations will be accepted after the cutoff.'
-                    : 'The official registration window closed on Wednesday, August 05, 2026 at 11:59 PM IST. Thank you for participating in CodeSprint 2026!'}
-                </p>
-              </div>
-            </div>
-          </div>
+
 
           {/* Pending Invites Banner (Teamless Users) */}
           {!user.teamId && pendingInvites.length > 0 && (
@@ -1375,6 +1351,46 @@ export default function UserDashboard() {
                 </div>
               </div>
 
+              {/* Assigned Problem Statements */}
+              {problems.length > 0 && (
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                  <h3 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+                    <Award className="h-4.5 w-4.5 text-purple-600" />
+                    Assigned Problem Statements
+                  </h3>
+                  <div className="space-y-4">
+                    {problems.map((p, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
+                        {/* Subtitle Header Row: Industry & Status */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/70">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">INDUSTRY:</span>
+                            <span className="text-xs font-extrabold text-purple-700 bg-purple-100/90 border border-purple-200 px-3 py-0.5 rounded-full">
+                              {p.industry || 'General Hackathon'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">ACTIVE</span>
+                        </div>
+
+                        {/* Title Subtitle */}
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">PROBLEM TITLE:</span>
+                          <h4 className="font-extrabold text-slate-900 text-base leading-snug">{p.title}</h4>
+                        </div>
+
+                        {/* Description Subtitle & Text */}
+                        <div>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1.5">PROBLEM STATEMENT & DESCRIPTION:</span>
+                          <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed bg-white border border-slate-200/80 rounded-xl p-4 shadow-inner">
+                            {p.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Layout grid cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
@@ -1450,29 +1466,6 @@ export default function UserDashboard() {
                   </div>
                 </div>
               </div>
-
-              {/* Assigned Problem Statements */}
-              {problems.length > 0 && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                    <Award className="h-4.5 w-4.5 text-purple-600" />
-                    Assigned Problem Statements
-                  </h3>
-                  <div className="space-y-4">
-                    {problems.map((p, idx) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-200/60 rounded-xl p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-bold text-slate-800 text-sm">{p.title}</h4>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">Active</span>
-                        </div>
-                        <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">
-                          {p.description}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
