@@ -24,7 +24,7 @@ const loadRazorpayScript = () => {
 
 export default function UserDashboard() {
   const router = useRouter();
-  const { user, token, loading, logout, refreshUser, updateUser } = useAuth();
+  const { user, token, loading, login, logout, refreshUser, updateUser } = useAuth();
   const { socket, addToast, triggerRefreshNotifications } = useSocket();
 
   // Tab State: overview | team | receipt | certificate
@@ -47,7 +47,6 @@ export default function UserDashboard() {
 
   // General dashboard announcements & problems
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [problems, setProblems] = useState<any[]>([]);
 
   // Form input validation messages
   const [teamError, setTeamError] = useState('');
@@ -99,9 +98,6 @@ export default function UserDashboard() {
           setPendingRequestTeam(null);
         } else {
           setTeamDetails(data);
-          if (data.problemSno) {
-            setProblemSnoInput(data.problemSno);
-          }
           setPendingRequestTeam(null);
         }
       }
@@ -146,58 +142,11 @@ export default function UserDashboard() {
   const [sessionMembers, setSessionMembers] = useState<any[]>([]);
   const [addMemberStep, setAddMemberStep] = useState<'input' | 'pay' | 'utr'>('input');
   const [printingTxId, setPrintingTxId] = useState<string | null>(null);
-  const [printingProblemId, setPrintingProblemId] = useState<string | null>(null);
-  const [previewProblemPdf, setPreviewProblemPdf] = useState<any | null>(null);
 
-  const handlePrintProblemPdf = (probId: string) => {
-    setPrintingProblemId(probId);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        setPrintingProblemId(null);
-      }, 1000);
-    }, 150);
-  };
+
   const [dashUtrLoading, setDashUtrLoading] = useState(false);
   const [dashUtrError, setDashUtrError] = useState('');
   const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
-
-  // Problem Statement SNO states for Team Leader
-  const [problemSnoInput, setProblemSnoInput] = useState('');
-  const [problemSnoLoading, setProblemSnoLoading] = useState(false);
-  const [problemSnoMessage, setProblemSnoMessage] = useState({ text: '', type: '' });
-
-  const handleSaveProblemSno = async () => {
-    if (!problemSnoInput || !problemSnoInput.trim()) {
-      setProblemSnoMessage({ text: 'Please enter a Problem Statement Serial Number (SNO).', type: 'error' });
-      return;
-    }
-    setProblemSnoLoading(true);
-    setProblemSnoMessage({ text: '', type: '' });
-    try {
-      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/teams/update-problem-sno', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ problemSno: problemSnoInput.trim() })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setProblemSnoMessage({ text: data.message || 'Problem Statement SNO saved successfully!', type: 'success' });
-        addToast('Problem SNO Updated', data.message || 'Problem SNO saved successfully!', 'success');
-        fetchMyTeam();
-        fetchProblems();
-      } else {
-        setProblemSnoMessage({ text: data.message || 'Failed to update Problem Statement SNO.', type: 'error' });
-      }
-    } catch (err: any) {
-      setProblemSnoMessage({ text: err?.message || 'Error connecting to server.', type: 'error' });
-    } finally {
-      setProblemSnoLoading(false);
-    }
-  };
 
   // College editing states for Team Leader (One-time edit per member)
   const [editingCollegeMemberId, setEditingCollegeMemberId] = useState<string | null>(null);
@@ -685,25 +634,11 @@ export default function UserDashboard() {
     }
   };
 
-  const fetchProblems = async () => {
-    if (!user) return;
-    try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_URL + '/api/user/problem-statements', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (res.ok) {
-        setProblems(await res.json());
-      }
-    } catch (e) {
-      console.error('Error fetching problems:', e);
-    }
-  };
 
   useEffect(() => {
     if (user) {
       fetchMyTeam();
       fetchAnnouncements();
-      fetchProblems();
       fetchPendingInvites();
       
       // Fetch colleges
@@ -1301,238 +1236,7 @@ export default function UserDashboard() {
                   )}
                 </div>
               </div>
-              {/* Problem Statement Serial Number (SNO) Input Card for Team Leader & Members */}
-              {teamDetails && (
-                <div className="bg-gradient-to-br from-purple-50 via-indigo-50/40 to-white border border-purple-200/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-base shadow-md shadow-purple-500/20 shrink-0">
-                        #
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                          Problem Statement Serial Number (SNO)
-                        </h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">
-                          {user.id === teamDetails.leaderId || user.role === 'team-leader'
-                            ? 'Enter the serial number (SNO) of your chosen Problem Statement.'
-                            : 'Problem Statement Serial Number assigned to your team.'}
-                        </p>
-                      </div>
-                    </div>
-                    {teamDetails.problemSno && (
-                      <span className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-xs rounded-full shadow-sm flex items-center gap-1.5">
-                        Current SNO: #{teamDetails.problemSno}
-                      </span>
-                    )}
-                  </div>
 
-                  {user.id === teamDetails.leaderId || user.role === 'team-leader' ? (
-                    <div className="pt-1 space-y-2">
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <input
-                          type="text"
-                          placeholder="Enter Problem Statement SNO (e.g. 1, 2, 3, PS-05...)"
-                          value={problemSnoInput}
-                          onChange={(e) => setProblemSnoInput(e.target.value)}
-                          className="flex-1 px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-xs font-extrabold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
-                        />
-                        <button
-                          onClick={handleSaveProblemSno}
-                          disabled={problemSnoLoading}
-                          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0 active:scale-95 disabled:opacity-50"
-                        >
-                          {problemSnoLoading ? (
-                            <>
-                              <Loader className="h-4 w-4 animate-spin" />
-                              Saving SNO...
-                            </>
-                          ) : (
-                            <>
-                              <Check className="h-4 w-4" />
-                              Save Problem SNO
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      {problemSnoMessage.text && (
-                        <p className={`text-xs font-bold mt-2 ${problemSnoMessage.type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {problemSnoMessage.text}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-xs font-medium text-slate-700 bg-white/90 border border-purple-100 p-3 rounded-xl">
-                      {teamDetails.problemSno ? (
-                        <span>Assigned Problem Statement SNO: <strong className="text-purple-700 font-extrabold text-sm">#{teamDetails.problemSno}</strong></span>
-                      ) : (
-                        <span className="text-slate-400 italic">Your Group Leader has not entered a Problem Statement SNO yet.</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Assigned Problem Statements */}
-              {problems.length > 0 && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                    <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                      <Award className="h-5 w-5 text-purple-600" />
-                      Assigned Problem Statement & Official PDF Specification
-                    </h3>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full uppercase tracking-wider">
-                      OFFICIALLY ASSIGNED
-                    </span>
-                  </div>
-
-                  <div className="space-y-6">
-                    {problems.map((p, idx) => (
-                      <div 
-                        key={idx} 
-                        className={`printable-problem-pdf bg-white border-2 border-purple-200/80 rounded-2xl overflow-hidden shadow-md transition-all ${
-                          printingProblemId === p.id ? 'printing' : ''
-                        }`}
-                      >
-                        {/* Interactive Toolbar (Hides during print) */}
-                        <div className="no-print bg-slate-900 text-white px-5 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-purple-400" />
-                            <span className="text-xs font-bold font-mono tracking-wide text-slate-200">
-                              PROBLEM SPECIFICATION PDF #{p.sno || (idx + 1)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setPreviewProblemPdf(p)}
-                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
-                            >
-                              <ExternalLink className="h-3.5 w-3.5" />
-                              Fullscreen PDF Preview
-                            </button>
-                            <button
-                              onClick={() => handlePrintProblemPdf(p.id)}
-                              className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              Download / Print PDF
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Printable PDF Document Layout */}
-                        <div className="p-6 sm:p-8 space-y-6 bg-gradient-to-b from-purple-50/30 via-white to-white">
-                          
-                          {/* Official PDF Document Header */}
-                          <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
-                            <div className="inline-block bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-2">
-                              Official Allocation Document
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
-                              CodeSprint 2026 National Level Hackathon
-                            </h2>
-                            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
-                              Audisankara Deemed to be University • Gudur, AP, India
-                            </p>
-                            <div className="text-[11px] font-semibold text-purple-800 mt-1 font-mono">
-                              REF: CS2026/PS/{p.sno || '01'}/{user?.teamId || 'ASSIGNED'}
-                            </div>
-                          </div>
-
-                          {/* Allocation & Team Metadata Grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-purple-50/60 border border-purple-200/80 rounded-xl p-4 text-xs font-mono">
-                            <div>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM NAME</span>
-                              <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.name || user?.teamId || 'CodeSprint Team'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM CODE</span>
-                              <span className="font-extrabold text-purple-700 text-sm truncate block">{teamDetails?.team?.code || user?.teamId || 'CS2026'}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM LEADER / USER</span>
-                              <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.leaderName || user?.name}</span>
-                            </div>
-                            <div>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase block">COLLEGE / INSTITUTION</span>
-                              <span className="font-extrabold text-slate-900 text-sm truncate block">{user?.college || 'Audisankara Deemed to be University'}</span>
-                            </div>
-                          </div>
-
-                          {/* Problem Specification Details */}
-                          <div className="space-y-4">
-                            <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl">
-                              <span className="text-xs font-bold font-mono uppercase tracking-wider text-purple-300">
-                                PROBLEM STATEMENT #{p.sno || (idx + 1)}
-                              </span>
-                              <span className="text-xs font-bold bg-purple-600 text-white px-3 py-0.5 rounded-full uppercase tracking-wider">
-                                INDUSTRY: {p.industry || 'General Hackathon'}
-                              </span>
-                            </div>
-
-                            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">
-                                PROBLEM STATEMENT TITLE:
-                              </span>
-                              <h3 className="text-lg font-black text-slate-900 leading-snug">
-                                {p.title}
-                              </h3>
-                            </div>
-
-                            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
-                                DETAILED PROBLEM DESCRIPTION & OBJECTIVES:
-                              </span>
-                              <p className="text-sm font-medium text-slate-800 whitespace-pre-wrap leading-relaxed">
-                                {p.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Guidelines & Evaluation Rules Box */}
-                          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2 text-xs text-slate-700">
-                            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                              Evaluation Criteria & Hackathon Guidelines
-                            </h4>
-                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 pl-2 font-medium">
-                              <li>• Technical Execution & Code Quality (30%)</li>
-                              <li>• Innovation & Problem Solution (30%)</li>
-                              <li>• Practical Feasibility & Usability (20%)</li>
-                              <li>• Final Presentation & Live Demo (20%)</li>
-                            </ul>
-                          </div>
-
-                          {/* Official Signatures & Seal Stamp */}
-                          <div className="pt-6 border-t border-slate-200 flex flex-wrap items-end justify-between gap-6">
-                            <div className="space-y-1">
-                              <div className="text-[10px] font-bold text-slate-400 uppercase font-mono">Issued & Verified By</div>
-                              <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
-                              <div className="text-[10px] text-slate-500 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
-                            </div>
-
-                            <div className="flex items-center gap-8">
-                              <div className="text-center">
-                                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                                  Dr. N. Penchalaiah
-                                </div>
-                                <div className="text-[10px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
-                              </div>
-                              <div className="text-center">
-                                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                                  Dr. K. Dhanumjaya
-                                </div>
-                                <div className="text-[10px] font-bold text-slate-500 uppercase">Dean, SET</div>
-                              </div>
-                            </div>
-                          </div>
-
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Layout grid cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1575,7 +1279,7 @@ export default function UserDashboard() {
                       <span className="text-[10px] font-bold font-mono text-purple-600 shrink-0 w-16 pt-0.5">ONLINE NOW</span>
                       <div className="flex-1 pl-4 border-l-2 border-purple-300 relative">
                         <div className="absolute left-[-6px] top-1.5 h-2 w-2 rounded-full bg-purple-600 ring-4 ring-purple-100" />
-                        <h4 className="font-bold text-slate-800">Matchmaking & Prep</h4>
+                        <h4 className="font-bold text-slate-800">Matchmaking &amp; Prep</h4>
                         <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Form teams on the dashboard, search public groups, align stack.</p>
                       </div>
                     </div>
@@ -1599,12 +1303,47 @@ export default function UserDashboard() {
                     </div>
 
                     <div className="flex gap-4 items-start opacity-75">
-                      <span className="text-[10px] font-bold font-mono text-slate-500 shrink-0 w-16 pt-0.5">AUG 08, 15:00</span>
+                      <span className="text-[10px] font-bold font-mono text-amber-600 shrink-0 w-16 pt-0.5">AUG 08, 16:00</span>
+                      <div className="flex-1 pl-4 border-l-2 border-amber-200 relative">
+                        <div className="absolute left-[-5px] top-1.5 h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <h4 className="font-bold text-slate-700">Evaluation 1 &amp; 2 Starts</h4>
+                        <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Both evaluation rounds commence. Jury desks active.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 items-start opacity-75">
+                      <span className="text-[10px] font-bold font-mono text-orange-600 shrink-0 w-16 pt-0.5">AUG 08, 17:00</span>
+                      <div className="flex-1 pl-4 border-l-2 border-orange-200 relative">
+                        <div className="absolute left-[-5px] top-1.5 h-1.5 w-1.5 rounded-full bg-orange-500" />
+                        <h4 className="font-bold text-slate-700">Last Jury Round Starts</h4>
+                        <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Final jury round begins. All teams must be ready for demo &amp; pitch.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 items-start opacity-75">
+                      <span className="text-[10px] font-bold font-mono text-emerald-600 shrink-0 w-16 pt-0.5">AUG 08, 18:00</span>
+                      <div className="flex-1 pl-4 border-l-2 border-emerald-200 relative">
+                        <div className="absolute left-[-5px] top-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                        <h4 className="font-bold text-slate-700">Prize Distribution</h4>
+                        <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Winners announced. Cash prizes &amp; trophies awarded on stage.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 items-start opacity-75">
+                      <span className="text-[10px] font-bold font-mono text-slate-500 shrink-0 w-16 pt-0.5">AUG 08, 18:30</span>
                       <div className="flex-1 pl-4 border-l-2 border-slate-100 relative">
                         <div className="absolute left-[-5px] top-1.5 h-1.5 w-1.5 rounded-full bg-slate-400" />
-                        <h4 className="font-bold text-slate-700">Pitch & Demo Round</h4>
-                        <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Present design iterations and working logic before final jury desk.</p>
+                        <h4 className="font-bold text-slate-700">Closure of Hackathon</h4>
+                        <p className="text-xxs text-slate-500 mt-0.5 leading-relaxed">Official closing ceremony. Thank you for participating in CodeSprint 2026!</p>
                       </div>
+                    </div>
+
+                    {/* Disqualification Notice */}
+                    <div className="mt-2 p-3 bg-rose-50 border border-rose-200 rounded-xl flex gap-2 items-start">
+                      <ShieldAlert className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
+                      <p className="text-[10px] font-semibold text-rose-700 leading-relaxed">
+                        <strong>Important:</strong> Only problem statements from the official given list of 300 are considered valid. Any solution built on a problem outside this list will result in <strong>immediate disqualification</strong>.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2489,145 +2228,6 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Fullscreen PDF Preview Modal */}
-      {previewProblemPdf && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fadeIn">
-            {/* Modal Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between gap-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-purple-400" />
-                <div>
-                  <h3 className="font-extrabold text-sm text-white font-mono">
-                    Official Problem Specification PDF #{previewProblemPdf.sno || '01'}
-                  </h3>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    REF: CS2026/PS/{previewProblemPdf.sno || '01'}/{user?.teamId || 'ASSIGNED'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => handlePrintProblemPdf(previewProblemPdf.id)}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <Download className="h-4 w-4" />
-                  Print / Download PDF
-                </button>
-                <button
-                  onClick={() => setPreviewProblemPdf(null)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal PDF Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 bg-slate-50">
-              <div className="bg-white border-2 border-purple-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-                
-                <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
-                  <div className="inline-block bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-2">
-                    Official Allocation Document
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
-                    CodeSprint 2026 National Level Hackathon
-                  </h2>
-                  <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
-                    Audisankara Deemed to be University • Gudur, AP, India
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-purple-50/60 border border-purple-200/80 rounded-xl p-4 text-xs font-mono">
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM NAME</span>
-                    <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.name || user?.teamId || 'CodeSprint Team'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM CODE</span>
-                    <span className="font-extrabold text-purple-700 text-sm truncate block">{teamDetails?.team?.code || user?.teamId || 'CS2026'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM LEADER / USER</span>
-                    <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.leaderName || user?.name}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] font-bold text-slate-400 uppercase block">COLLEGE / INSTITUTION</span>
-                    <span className="font-extrabold text-slate-900 text-sm truncate block">{user?.college || 'Audisankara Deemed to be University'}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl">
-                    <span className="text-xs font-bold font-mono uppercase tracking-wider text-purple-300">
-                      PROBLEM STATEMENT #{previewProblemPdf.sno || '01'}
-                    </span>
-                    <span className="text-xs font-bold bg-purple-600 text-white px-3 py-0.5 rounded-full uppercase tracking-wider">
-                      INDUSTRY: {previewProblemPdf.industry || 'General Hackathon'}
-                    </span>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">
-                      PROBLEM STATEMENT TITLE:
-                    </span>
-                    <h3 className="text-lg font-black text-slate-900 leading-snug">
-                      {previewProblemPdf.title}
-                    </h3>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
-                      DETAILED PROBLEM DESCRIPTION & OBJECTIVES:
-                    </span>
-                    <p className="text-sm font-medium text-slate-800 whitespace-pre-wrap leading-relaxed">
-                      {previewProblemPdf.description}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2 text-xs text-slate-700">
-                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    Evaluation Criteria & Hackathon Guidelines
-                  </h4>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 pl-2 font-medium">
-                    <li>• Technical Execution & Code Quality (30%)</li>
-                    <li>• Innovation & Problem Solution (30%)</li>
-                    <li>• Practical Feasibility & Usability (20%)</li>
-                    <li>• Final Presentation & Live Demo (20%)</li>
-                  </ul>
-                </div>
-
-                <div className="pt-6 border-t border-slate-200 flex flex-wrap items-end justify-between gap-6">
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase font-mono">Issued & Verified By</div>
-                    <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
-                  </div>
-
-                  <div className="flex items-center gap-8">
-                    <div className="text-center">
-                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                        Dr. N. Penchalaiah
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                        Dr. K. Dhanumjaya
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Dean, SET</div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       <style>{`
         @keyframes fadeIn {
@@ -2638,8 +2238,7 @@ export default function UserDashboard() {
           body * {
             visibility: hidden !important;
           }
-          .printable-receipt-card.printing,
-          .printable-problem-pdf.printing {
+          .printable-receipt-card.printing {
             visibility: visible !important;
             position: absolute !important;
             left: 0 !important;
@@ -2650,8 +2249,7 @@ export default function UserDashboard() {
             margin: 0 !important;
             padding: 0 !important;
           }
-          .printable-receipt-card.printing *,
-          .printable-problem-pdf.printing * {
+          .printable-receipt-card.printing * {
             visibility: visible !important;
           }
           .no-print {

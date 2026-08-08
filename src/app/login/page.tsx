@@ -184,7 +184,7 @@ export default function LoginPage() {
           <div className="text-center mb-8">
             <h1 className="text-xl font-bold text-slate-900 tracking-tight">Sign in to CodeSprint-2026</h1>
             <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-              Use your Google account or email bypass to access your dashboard,<br />register, and manage your team.
+              Use your Google account to access your dashboard,<br />register, and manage your team.
             </p>
           </div>
 
@@ -232,8 +232,9 @@ export default function LoginPage() {
             {loading ? 'Signing in…' : 'Continue with Google'}
           </button>
 
-          {/* ── EMAIL BYPASS LOGIN ── set BYPASS_ENABLED to true to re-enable ── */}
+          {/* ── EMAIL BYPASS LOGIN ── */}
           {(false /* BYPASS_ENABLED */) && (<>
+
           {/* Bypass Login for Instant Access / Testing */}
           <div className="relative my-5 flex py-1 items-center">
             <div className="flex-grow border-t border-slate-200"></div>

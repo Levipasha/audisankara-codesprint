@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, MapPin, Award, Users, ShieldAlert, Sparkles, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Trophy, Clock, Cpu, BookOpen, Layers, Check, Ticket, Phone, FolderOpen, Image as ImageIcon, X, Star, FileText, Download } from 'lucide-react';
+import { Calendar, MapPin, Award, Users, ShieldAlert, Sparkles, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Trophy, Clock, Cpu, BookOpen, Layers, Check, Ticket, Phone, Image as ImageIcon, X, Star, FileText, Download } from 'lucide-react';
 
 const TOP_PRIZES = [
   {
@@ -107,9 +107,9 @@ const FAQS = [
   { q: 'Who is eligible to participate?', a: 'All college students from any branch or department are eligible to register. Cross-department teams are highly encouraged.' },
   { q: 'What is the team size and composition?', a: 'Teams must consist of 3 to 5 members.' },
   { q: 'What is the registration fee?', a: 'The registration fee is ₹399 per participant, which includes the event T-Shirt, participation certificate, and a working lunch.' },
-  { q: 'How are problem statements selected?', a: 'Each team will receive one randomly allocated problem statement from healthcare, agriculture, retail, finance, retail, smart cities, retailer, logistics, retailer, environment, retail, retail, retailers or hospitality. Teams must build a working prototype in 8 hours.' },
+  { q: 'How are problem statements selected?', a: 'Only problem statements chosen from the official given list of 300 statements are considered valid. Solutions built on any problem statement apart from this list will be straight away disqualified.' },
   { q: 'Are AI tools and third-party libraries allowed?', a: 'Yes! Teams are allowed to use open-source libraries and AI tools (like ChatGPT, Claude, Gemini, and GitHub Copilot) for research and development. However, teams must fully understand their code.' },
-  { q: 'What is the evaluation timeline?', a: 'Evaluation takes place in 4 stages: Stage 1 (Discover & Innovate - 9:00 AM), Stage 2 (Build Progress - 10:00 AM), Stage 3 (Prototype Quality - 12:00 PM), and Stage 4 (Final Pitch & Demo - 3:00 PM).' }
+  { q: 'What is the evaluation timeline?', a: 'Schedule: 4:00 PM (Evaluation 1 & 2 starts), 5:00 PM (Last jury round starts), 6:00 PM (Prize distribution), and 6:30 PM (Closure of hackathon).' }
 ];
 
 export default function LandingPage() {
@@ -120,11 +120,7 @@ export default function LandingPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [coordinators, setCoordinators] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [teamAssignments, setTeamAssignments] = useState<any[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showMasterModal, setShowMasterModal] = useState(false);
   const [showProblemPdfModal, setShowProblemPdfModal] = useState(false);
-  const [printingMasterPdf, setPrintingMasterPdf] = useState(false);
   const marqueeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -164,20 +160,9 @@ export default function LandingPage() {
       }
     });
 
-    safeFetchJson(`${apiUrl}/api/public/problem-assignments`).then(data => {
-      if (data && Array.isArray(data)) setTeamAssignments(data);
-    });
   }, []);
 
-  const handlePrintMasterPdf = () => {
-    setPrintingMasterPdf(true);
-    setTimeout(() => {
-      window.print();
-      setTimeout(() => {
-        setPrintingMasterPdf(false);
-      }, 1000);
-    }, 200);
-  };
+
 
   useEffect(() => {
     const marqueeContainer = marqueeRef.current;
@@ -677,177 +662,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Master Team Allocation & Problem Statements PDF Directory Section */}
-      <section id="allocations" className="py-20 bg-slate-900 text-white relative overflow-hidden">
-        {/* Ambient background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 space-y-10">
-          
-          {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-slate-800">
-            <div className="space-y-3 max-w-2xl text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-bold font-mono uppercase tracking-wider">
-                <FolderOpen className="h-3.5 w-3.5" />
-                OFFICIAL HACKATHON DIRECTORY
-              </div>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                Team Allocation & Problem Statements Directory
-              </h2>
-              <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">
-                Official master list of all participating teams and their assigned hackathon problem statements for CodeSprint 2026. Search your team or download the complete PDF directory below.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <a
-                href="/CodeSprint_2026_Problem_Statements.pdf"
-                download="CodeSprint_2026_Problem_Statements.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95"
-              >
-                <FileText className="h-4 w-4" />
-                <span>Download Problem Statements PDF</span>
-                <Download className="h-3.5 w-3.5" />
-              </a>
-              <button
-                onClick={() => setShowProblemPdfModal(true)}
-                className="px-5 py-3 bg-purple-900/80 hover:bg-purple-900 text-purple-200 font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-purple-700/60 shadow-md"
-              >
-                <FileText className="h-4 w-4 text-purple-300" />
-                <span>View Problem Statements PDF</span>
-              </button>
-              <button
-                onClick={() => setShowMasterModal(true)}
-                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-700 shadow-md"
-              >
-                <FolderOpen className="h-4 w-4 text-slate-400" />
-                <span>Master Team Directory</span>
-              </button>
-              <button
-                onClick={handlePrintMasterPdf}
-                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-700 shadow-md active:scale-95"
-              >
-                <FolderOpen className="h-4 w-4" />
-                <span>Print Master PDF</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search & Filter Toolbar */}
-          <div className="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-md">
-            <div className="relative w-full sm:w-96">
-              <input
-                type="text"
-                placeholder="Search Team ID, Team Name, Leader, College, or Problem..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-purple-500 transition-all font-mono"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-
-            <div className="text-xs text-slate-400 font-mono flex items-center gap-2">
-              <span className="font-extrabold text-purple-400">
-                {teamAssignments.filter(t => {
-                  if (!searchQuery) return true;
-                  const q = searchQuery.toLowerCase();
-                  return t.teamId.toLowerCase().includes(q) ||
-                         t.teamName.toLowerCase().includes(q) ||
-                         t.leaderName.toLowerCase().includes(q) ||
-                         t.college.toLowerCase().includes(q) ||
-                         (t.problems && t.problems.some((p: any) => p.title.toLowerCase().includes(q)));
-                }).length}
-              </span> 
-              / {teamAssignments.length} Teams Matched
-            </div>
-          </div>
-
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-left">
-            {teamAssignments
-              .filter(t => {
-                if (!searchQuery) return true;
-                const q = searchQuery.toLowerCase();
-                return t.teamId.toLowerCase().includes(q) ||
-                       t.teamName.toLowerCase().includes(q) ||
-                       t.leaderName.toLowerCase().includes(q) ||
-                       t.college.toLowerCase().includes(q) ||
-                       (t.problems && t.problems.some((p: any) => p.title.toLowerCase().includes(q)));
-              })
-              .slice(0, 12)
-              .map((item, idx) => (
-                <div 
-                  key={idx}
-                  className="bg-slate-800/60 border border-slate-700/80 hover:border-purple-500/50 rounded-2xl p-5 space-y-4 transition-all hover:bg-slate-800/90 shadow-lg group"
-                >
-                  <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-700/60">
-                    <div>
-                      <span className="text-[10px] font-extrabold font-mono text-purple-400 bg-purple-950/80 border border-purple-800 px-2.5 py-0.5 rounded-md">
-                        {item.teamId}
-                      </span>
-                      <h3 className="font-extrabold text-white text-base mt-1 line-clamp-1 group-hover:text-purple-300 transition-colors">
-                        {item.teamName}
-                      </h3>
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2 py-0.5 rounded-full font-mono">
-                      ALLOCATED
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5 text-xs text-slate-300 font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">LEADER:</span>
-                      <span className="font-bold text-slate-200 truncate max-w-[180px]">{item.leaderName}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">COLLEGE:</span>
-                      <span className="font-medium text-slate-300 truncate max-w-[180px]">{item.college}</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-purple-400 font-bold">
-                      <span>ASSIGNED PROBLEM STATEMENT</span>
-                      {item.problems.length > 0 && <span>#{item.problems[0].sno}</span>}
-                    </div>
-                    {item.problems.length > 0 ? (
-                      <div>
-                        <h4 className="font-bold text-xs text-white leading-snug line-clamp-2">{item.problems[0].title}</h4>
-                        <span className="inline-block mt-1 text-[9px] font-bold text-purple-300 bg-purple-900/60 px-2 py-0.5 rounded-full border border-purple-700/50">
-                          {item.problems[0].industry}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-500">General Hackathon Challenge</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-          </div>
-
-          {teamAssignments.length > 12 && (
-            <div className="text-center pt-4">
-              <button
-                onClick={() => setShowMasterModal(true)}
-                className="px-8 py-3 bg-slate-800 hover:bg-slate-700 text-white font-extrabold rounded-2xl text-xs transition-all cursor-pointer border border-slate-700 shadow-md inline-flex items-center gap-2"
-              >
-                <span>View All {teamAssignments.length} Team Allocations & Full Directory</span>
-                <ArrowRight className="h-4 w-4 text-purple-400" />
-              </button>
-            </div>
-          )}
-
-        </div>
-      </section>
 
       {/* Chief Guests Section */}
       {guests.filter(g => g.status === 'confirmed').length > 0 && (
@@ -984,10 +798,10 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-6xl mx-auto text-left">
           {[
-            { stage: '1', title: 'Discover & Innovate', time: '9:00 AM – 10:00 AM', desc: 'Focuses on problem understanding, brainstorming, planning, and feature scoping.' },
-            { stage: '2', title: 'Build Progress', time: '10:00 AM – 12:00 PM', desc: 'Jury reviews tech stack, setup, architecture, code quality, and initial prototype builds.' },
-            { stage: '3', title: 'Prototype Quality', time: '12:00 PM – 3:00 PM', desc: 'Reviews UI/UX designs, teamwork metrics, user flow completion, and mentor feedback integration.' },
-            { stage: '4', title: 'Final Pitch & Demo', time: '3:00 PM – 5:00 PM', desc: 'Working prototype demos, slide pitching, code explanations, and Q&A defense.' },
+            { stage: '1', title: 'Evaluation 1 & 2 Starts', time: '4:00 PM', desc: 'Evaluation rounds 1 and 2 commence simultaneously across all jury desks.' },
+            { stage: '2', title: 'Last Jury Round Starts', time: '5:00 PM', desc: 'Final jury evaluation round begins. Teams present prototype demos & defense.' },
+            { stage: '3', title: 'Prize Distribution', time: '6:00 PM', desc: 'Winners announced on stage with cash prizes, trophies & certificates of honor.' },
+            { stage: '4', title: 'Closure of Hackathon', time: '6:30 PM', desc: 'Official closing ceremony and conclusion of CodeSprint 2026.' },
           ].map((item, idx) => (
             <div key={idx} className="p-6 rounded-2xl bg-white border border-blue-100 flex flex-col justify-between min-h-[15rem] hover:shadow-md hover:border-blue-200 transition-all">
               <div>
@@ -1239,239 +1053,10 @@ export default function LandingPage() {
         </div>
       )}
 
-      {/* Fullscreen Master Team Problem Statements PDF Directory Modal */}
-      {showMasterModal && (
-        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fadeIn">
-            {/* Header */}
-            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between gap-4 border-b border-slate-800">
-              <div className="flex items-center gap-2">
-                <FolderOpen className="h-5 w-5 text-purple-400" />
-                <div>
-                  <h3 className="font-extrabold text-sm text-white font-mono">
-                    CodeSprint 2026 Master Team Allocation Directory PDF
-                  </h3>
-                  <p className="text-[10px] text-slate-400 font-mono">
-                    REF: CS2026/MASTER/ALLOCATIONS ({teamAssignments.length} TEAMS ALLOCATED)
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handlePrintMasterPdf}
-                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  Print / Save Master PDF
-                </button>
-                <button
-                  onClick={() => setShowMasterModal(false)}
-                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Search Filter inside Modal */}
-            <div className="bg-slate-100 px-6 py-3 border-b border-slate-200 flex items-center justify-between gap-4">
-              <input
-                type="text"
-                placeholder="Search Team Code, Name, Leader, College or Problem..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-purple-600 font-mono"
-              />
-            </div>
-
-            {/* Printable PDF Directory Body */}
-            <div className="p-6 overflow-y-auto space-y-6 bg-slate-50">
-              <div className="bg-white border-2 border-purple-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-                
-                <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
-                  <div className="inline-block bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-2">
-                    Master Hackathon Directory
-                  </div>
-                  <h2 className="text-xl sm:text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
-                    CodeSprint 2026 National Level Hackathon
-                  </h2>
-                  <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
-                    Audisankara Deemed to be University • Gudur, AP, India
-                  </p>
-                  <div className="text-[11px] font-semibold text-purple-800 mt-1 font-mono">
-                    OFFICIAL MASTER TEAM PROBLEM STATEMENT ALLOCATION LEDGER ({teamAssignments.length} TOTAL TEAMS)
-                  </div>
-                </div>
-
-                {/* Master Table */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono border-collapse">
-                    <thead>
-                      <tr className="bg-slate-900 text-white text-[10px] uppercase tracking-wider">
-                        <th className="p-3 border border-slate-800 text-center">#</th>
-                        <th className="p-3 border border-slate-800">Team Code</th>
-                        <th className="p-3 border border-slate-800">Team Name</th>
-                        <th className="p-3 border border-slate-800">Team Leader</th>
-                        <th className="p-3 border border-slate-800">Institution / College</th>
-                        <th className="p-3 border border-slate-800">Assigned Problem Statement</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-slate-800">
-                      {teamAssignments
-                        .filter(t => {
-                          if (!searchQuery) return true;
-                          const q = searchQuery.toLowerCase();
-                          return t.teamId.toLowerCase().includes(q) ||
-                                 t.teamName.toLowerCase().includes(q) ||
-                                 t.leaderName.toLowerCase().includes(q) ||
-                                 t.college.toLowerCase().includes(q) ||
-                                 (t.problems && t.problems.some((p: any) => p.title.toLowerCase().includes(q)));
-                        })
-                        .map((item, index) => (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                            <td className="p-3 border border-slate-200 text-center font-bold">{index + 1}</td>
-                            <td className="p-3 border border-slate-200 font-extrabold text-purple-900">{item.teamId}</td>
-                            <td className="p-3 border border-slate-200 font-bold text-slate-900">{item.teamName}</td>
-                            <td className="p-3 border border-slate-200 font-medium">{item.leaderName}</td>
-                            <td className="p-3 border border-slate-200 text-slate-600 text-[11px]">{item.college}</td>
-                            <td className="p-3 border border-slate-200 font-medium">
-                              {item.problems.length > 0 ? (
-                                <div>
-                                  <span className="font-extrabold text-slate-900 block">#{item.problems[0].sno} {item.problems[0].title}</span>
-                                  <span className="text-[9px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full inline-block mt-0.5">
-                                    {item.problems[0].industry}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-slate-400 italic">General Challenge</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="pt-6 border-t border-slate-200 flex flex-wrap items-end justify-between gap-6">
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase font-mono">Issued & Verified By</div>
-                    <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
-                    <div className="text-[10px] text-slate-500 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
-                  </div>
-
-                  <div className="flex items-center gap-8">
-                    <div className="text-center">
-                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                        Dr. N. Penchalaiah
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
-                        Dr. K. Dhanumjaya
-                      </div>
-                      <div className="text-[10px] font-bold text-slate-500 uppercase">Dean, SET</div>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Printable Master PDF Container */}
-      <div className={`printable-master-assignments-pdf ${printingMasterPdf ? 'printing' : ''}`}>
-        <div className="p-8 space-y-6 bg-white">
-          <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
-            <h1 className="text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
-              CodeSprint 2026 National Level Hackathon
-            </h1>
-            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
-              Audisankara Deemed to be University • Gudur, AP, India
-            </p>
-            <div className="text-xs font-extrabold text-purple-900 mt-2 font-mono uppercase">
-              OFFICIAL MASTER TEAM PROBLEM STATEMENT ALLOCATION LEDGER ({teamAssignments.length} TOTAL TEAMS)
-            </div>
-          </div>
-
-          <table className="w-full text-left text-xs font-mono border-collapse border border-slate-300">
-            <thead>
-              <tr className="bg-slate-900 text-white text-[10px] uppercase">
-                <th className="p-2 border border-slate-400 text-center">#</th>
-                <th className="p-2 border border-slate-400">Team Code</th>
-                <th className="p-2 border border-slate-400">Team Name</th>
-                <th className="p-2 border border-slate-400">Leader Name</th>
-                <th className="p-2 border border-slate-400">College / Institution</th>
-                <th className="p-2 border border-slate-400">Assigned Problem Statement</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-300 text-slate-900">
-              {teamAssignments.map((item, index) => (
-                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                  <td className="p-2 border border-slate-300 text-center font-bold">{index + 1}</td>
-                  <td className="p-2 border border-slate-300 font-extrabold">{item.teamId}</td>
-                  <td className="p-2 border border-slate-300 font-bold">{item.teamName}</td>
-                  <td className="p-2 border border-slate-300">{item.leaderName}</td>
-                  <td className="p-2 border border-slate-300 text-[10px]">{item.college}</td>
-                  <td className="p-2 border border-slate-300 font-medium">
-                    {item.problems.length > 0 ? (
-                      `#${item.problems[0].sno} ${item.problems[0].title} (${item.problems[0].industry})`
-                    ) : (
-                      'General Challenge'
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="pt-8 border-t border-slate-300 flex items-end justify-between">
-            <div>
-              <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
-              <div className="text-[10px] text-slate-600 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
-            </div>
-            <div className="flex items-center gap-12">
-              <div className="text-center">
-                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">Dr. N. Penchalaiah</div>
-                <div className="text-[9px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
-              </div>
-              <div className="text-center">
-                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">Dr. K. Dhanumjaya</div>
-                <div className="text-[9px] font-bold text-slate-500 uppercase">Dean, SET</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <style>{`
         @keyframes marquee-vertical {
           from { transform: translateY(0); }
           to { transform: translateY(-50%); }
-        }
-        @media print {
-          body * {
-            visibility: hidden !important;
-          }
-          .printable-master-assignments-pdf.printing {
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            border: none !important;
-            box-shadow: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          .printable-master-assignments-pdf.printing * {
-            visibility: visible !important;
-          }
-          .no-print {
-            display: none !important;
-          }
         }
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
