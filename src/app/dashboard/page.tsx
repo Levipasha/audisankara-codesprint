@@ -143,6 +143,18 @@ export default function UserDashboard() {
   const [sessionMembers, setSessionMembers] = useState<any[]>([]);
   const [addMemberStep, setAddMemberStep] = useState<'input' | 'pay' | 'utr'>('input');
   const [printingTxId, setPrintingTxId] = useState<string | null>(null);
+  const [printingProblemId, setPrintingProblemId] = useState<string | null>(null);
+  const [previewProblemPdf, setPreviewProblemPdf] = useState<any | null>(null);
+
+  const handlePrintProblemPdf = (probId: string) => {
+    setPrintingProblemId(probId);
+    setTimeout(() => {
+      window.print();
+      setTimeout(() => {
+        setPrintingProblemId(null);
+      }, 1000);
+    }, 150);
+  };
   const [dashUtrLoading, setDashUtrLoading] = useState(false);
   const [dashUtrError, setDashUtrError] = useState('');
   const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
@@ -1353,37 +1365,158 @@ export default function UserDashboard() {
 
               {/* Assigned Problem Statements */}
               {problems.length > 0 && (
-                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-sm font-bold text-slate-900 mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
-                    <Award className="h-4.5 w-4.5 text-purple-600" />
-                    Assigned Problem Statements
-                  </h3>
-                  <div className="space-y-4">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                    <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                      <Award className="h-5 w-5 text-purple-600" />
+                      Assigned Problem Statement & Official PDF Specification
+                    </h3>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full uppercase tracking-wider">
+                      OFFICIALLY ASSIGNED
+                    </span>
+                  </div>
+
+                  <div className="space-y-6">
                     {problems.map((p, idx) => (
-                      <div key={idx} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 space-y-4 shadow-sm">
-                        {/* Subtitle Header Row: Industry & Status */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200/70">
+                      <div 
+                        key={idx} 
+                        className={`printable-problem-pdf bg-white border-2 border-purple-200/80 rounded-2xl overflow-hidden shadow-md transition-all ${
+                          printingProblemId === p.id ? 'printing' : ''
+                        }`}
+                      >
+                        {/* Interactive Toolbar (Hides during print) */}
+                        <div className="no-print bg-slate-900 text-white px-5 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">INDUSTRY:</span>
-                            <span className="text-xs font-extrabold text-purple-700 bg-purple-100/90 border border-purple-200 px-3 py-0.5 rounded-full">
-                              {p.industry || 'General Hackathon'}
+                            <FileText className="h-4 w-4 text-purple-400" />
+                            <span className="text-xs font-bold font-mono tracking-wide text-slate-200">
+                              PROBLEM SPECIFICATION PDF #{p.sno || (idx + 1)}
                             </span>
                           </div>
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">ACTIVE</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setPreviewProblemPdf(p)}
+                              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-purple-300 font-bold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700 shadow-sm"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                              Fullscreen PDF Preview
+                            </button>
+                            <button
+                              onClick={() => handlePrintProblemPdf(p.id)}
+                              className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              Download / Print PDF
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Title Subtitle */}
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">PROBLEM TITLE:</span>
-                          <h4 className="font-extrabold text-slate-900 text-base leading-snug">{p.title}</h4>
-                        </div>
+                        {/* Printable PDF Document Layout */}
+                        <div className="p-6 sm:p-8 space-y-6 bg-gradient-to-b from-purple-50/30 via-white to-white">
+                          
+                          {/* Official PDF Document Header */}
+                          <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
+                            <div className="inline-block bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-2">
+                              Official Allocation Document
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
+                              CodeSprint 2026 National Level Hackathon
+                            </h2>
+                            <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
+                              Audisankara Deemed to be University • Gudur, AP, India
+                            </p>
+                            <div className="text-[11px] font-semibold text-purple-800 mt-1 font-mono">
+                              REF: CS2026/PS/{p.sno || '01'}/{user?.teamId || 'ASSIGNED'}
+                            </div>
+                          </div>
 
-                        {/* Description Subtitle & Text */}
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1.5">PROBLEM STATEMENT & DESCRIPTION:</span>
-                          <p className="text-sm font-medium text-slate-700 whitespace-pre-wrap leading-relaxed bg-white border border-slate-200/80 rounded-xl p-4 shadow-inner">
-                            {p.description}
-                          </p>
+                          {/* Allocation & Team Metadata Grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-purple-50/60 border border-purple-200/80 rounded-xl p-4 text-xs font-mono">
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM NAME</span>
+                              <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.name || user?.teamId || 'CodeSprint Team'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM CODE</span>
+                              <span className="font-extrabold text-purple-700 text-sm truncate block">{teamDetails?.team?.code || user?.teamId || 'CS2026'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM LEADER / USER</span>
+                              <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.leaderName || user?.name}</span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase block">COLLEGE / INSTITUTION</span>
+                              <span className="font-extrabold text-slate-900 text-sm truncate block">{user?.college || 'Audisankara Deemed to be University'}</span>
+                            </div>
+                          </div>
+
+                          {/* Problem Specification Details */}
+                          <div className="space-y-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl">
+                              <span className="text-xs font-bold font-mono uppercase tracking-wider text-purple-300">
+                                PROBLEM STATEMENT #{p.sno || (idx + 1)}
+                              </span>
+                              <span className="text-xs font-bold bg-purple-600 text-white px-3 py-0.5 rounded-full uppercase tracking-wider">
+                                INDUSTRY: {p.industry || 'General Hackathon'}
+                              </span>
+                            </div>
+
+                            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">
+                                PROBLEM STATEMENT TITLE:
+                              </span>
+                              <h3 className="text-lg font-black text-slate-900 leading-snug">
+                                {p.title}
+                              </h3>
+                            </div>
+
+                            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
+                                DETAILED PROBLEM DESCRIPTION & OBJECTIVES:
+                              </span>
+                              <p className="text-sm font-medium text-slate-800 whitespace-pre-wrap leading-relaxed">
+                                {p.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Guidelines & Evaluation Rules Box */}
+                          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2 text-xs text-slate-700">
+                            <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              Evaluation Criteria & Hackathon Guidelines
+                            </h4>
+                            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 pl-2 font-medium">
+                              <li>• Technical Execution & Code Quality (30%)</li>
+                              <li>• Innovation & Problem Solution (30%)</li>
+                              <li>• Practical Feasibility & Usability (20%)</li>
+                              <li>• Final Presentation & Live Demo (20%)</li>
+                            </ul>
+                          </div>
+
+                          {/* Official Signatures & Seal Stamp */}
+                          <div className="pt-6 border-t border-slate-200 flex flex-wrap items-end justify-between gap-6">
+                            <div className="space-y-1">
+                              <div className="text-[10px] font-bold text-slate-400 uppercase font-mono">Issued & Verified By</div>
+                              <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
+                              <div className="text-[10px] text-slate-500 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
+                            </div>
+
+                            <div className="flex items-center gap-8">
+                              <div className="text-center">
+                                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
+                                  Dr. N. Penchalaiah
+                                </div>
+                                <div className="text-[10px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
+                              </div>
+                              <div className="text-center">
+                                <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
+                                  Dr. K. Dhanumjaya
+                                </div>
+                                <div className="text-[10px] font-bold text-slate-500 uppercase">Dean, SET</div>
+                              </div>
+                            </div>
+                          </div>
+
                         </div>
                       </div>
                     ))}
@@ -2346,6 +2479,146 @@ export default function UserDashboard() {
         </div>
       )}
 
+      {/* Fullscreen PDF Preview Modal */}
+      {previewProblemPdf && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fadeIn">
+            {/* Modal Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-purple-400" />
+                <div>
+                  <h3 className="font-extrabold text-sm text-white font-mono">
+                    Official Problem Specification PDF #{previewProblemPdf.sno || '01'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    REF: CS2026/PS/{previewProblemPdf.sno || '01'}/{user?.teamId || 'ASSIGNED'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handlePrintProblemPdf(previewProblemPdf.id)}
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Download className="h-4 w-4" />
+                  Print / Download PDF
+                </button>
+                <button
+                  onClick={() => setPreviewProblemPdf(null)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal PDF Body */}
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-6 bg-slate-50">
+              <div className="bg-white border-2 border-purple-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
+                
+                <div className="border-b-2 border-purple-900/20 pb-5 text-center relative">
+                  <div className="inline-block bg-purple-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full mb-2">
+                    Official Allocation Document
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-purple-950 uppercase tracking-tight font-serif">
+                    CodeSprint 2026 National Level Hackathon
+                  </h2>
+                  <p className="text-xs font-bold text-slate-600 uppercase tracking-widest mt-1 font-mono">
+                    Audisankara Deemed to be University • Gudur, AP, India
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-purple-50/60 border border-purple-200/80 rounded-xl p-4 text-xs font-mono">
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM NAME</span>
+                    <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.name || user?.teamId || 'CodeSprint Team'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM CODE</span>
+                    <span className="font-extrabold text-purple-700 text-sm truncate block">{teamDetails?.team?.code || user?.teamId || 'CS2026'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">TEAM LEADER / USER</span>
+                    <span className="font-extrabold text-slate-900 text-sm truncate block">{teamDetails?.team?.leaderName || user?.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-bold text-slate-400 uppercase block">COLLEGE / INSTITUTION</span>
+                    <span className="font-extrabold text-slate-900 text-sm truncate block">{user?.college || 'Audisankara Deemed to be University'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl">
+                    <span className="text-xs font-bold font-mono uppercase tracking-wider text-purple-300">
+                      PROBLEM STATEMENT #{previewProblemPdf.sno || '01'}
+                    </span>
+                    <span className="text-xs font-bold bg-purple-600 text-white px-3 py-0.5 rounded-full uppercase tracking-wider">
+                      INDUSTRY: {previewProblemPdf.industry || 'General Hackathon'}
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block mb-1">
+                      PROBLEM STATEMENT TITLE:
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 leading-snug">
+                      {previewProblemPdf.title}
+                    </h3>
+                  </div>
+
+                  <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono block">
+                      DETAILED PROBLEM DESCRIPTION & OBJECTIVES:
+                    </span>
+                    <p className="text-sm font-medium text-slate-800 whitespace-pre-wrap leading-relaxed">
+                      {previewProblemPdf.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 space-y-2 text-xs text-slate-700">
+                  <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Evaluation Criteria & Hackathon Guidelines
+                  </h4>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-600 pl-2 font-medium">
+                    <li>• Technical Execution & Code Quality (30%)</li>
+                    <li>• Innovation & Problem Solution (30%)</li>
+                    <li>• Practical Feasibility & Usability (20%)</li>
+                    <li>• Final Presentation & Live Demo (20%)</li>
+                  </ul>
+                </div>
+
+                <div className="pt-6 border-t border-slate-200 flex flex-wrap items-end justify-between gap-6">
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-bold text-slate-400 uppercase font-mono">Issued & Verified By</div>
+                    <div className="text-xs font-extrabold text-purple-950 font-serif">CodeSprint 2026 Organizing Committee</div>
+                    <div className="text-[10px] text-slate-500 font-mono">Audisankara Deemed to be University, Gudur, AP</div>
+                  </div>
+
+                  <div className="flex items-center gap-8">
+                    <div className="text-center">
+                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
+                        Dr. N. Penchalaiah
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase">Faculty Coordinator</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="font-serif italic font-extrabold text-slate-800 text-sm border-b border-slate-400 pb-1 mb-1">
+                        Dr. K. Dhanumjaya
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase">Dean, SET</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(5px); }
@@ -2355,7 +2628,8 @@ export default function UserDashboard() {
           body * {
             visibility: hidden !important;
           }
-          .printable-receipt-card.printing {
+          .printable-receipt-card.printing,
+          .printable-problem-pdf.printing {
             visibility: visible !important;
             position: absolute !important;
             left: 0 !important;
@@ -2366,7 +2640,8 @@ export default function UserDashboard() {
             margin: 0 !important;
             padding: 0 !important;
           }
-          .printable-receipt-card.printing * {
+          .printable-receipt-card.printing *,
+          .printable-problem-pdf.printing * {
             visibility: visible !important;
           }
           .no-print {
