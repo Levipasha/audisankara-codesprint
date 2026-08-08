@@ -667,9 +667,12 @@ export default function UserDashboard() {
       fetchPendingInvites();
       
       // Fetch colleges
-      fetch(process.env.NEXT_PUBLIC_API_URL + '/api/colleges')
-        .then(res => res.json())
-        .then(data => setColleges(data))
+      fetch((process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000') + '/api/colleges')
+        .then(res => {
+          if (res.ok && res.headers.get('content-type')?.includes('application/json')) return res.json();
+          return [];
+        })
+        .then(data => setColleges(Array.isArray(data) ? data : []))
         .catch(console.error);
     }
   }, [user]);

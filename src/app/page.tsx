@@ -129,37 +129,43 @@ export default function LandingPage() {
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-    fetch(apiUrl + '/api/guests')
-      .then(res => res.json())
-      .then(data => setGuests(data))
-      .catch(console.error);
+    const safeFetchJson = (url: string) => {
+      return fetch(url)
+        .then(async (res) => {
+          const contentType = res.headers.get('content-type') || '';
+          if (!res.ok || !contentType.includes('application/json')) {
+            return null;
+          }
+          return await res.json();
+        })
+        .catch((err) => {
+          console.warn('Fetch error for', url, err);
+          return null;
+        });
+    };
 
-    fetch(apiUrl + '/api/highlights')
-      .then(res => res.json())
-      .then(data => setAlbums(data))
-      .catch(console.error);
+    safeFetchJson(apiUrl + '/api/guests').then(data => {
+      if (data && Array.isArray(data)) setGuests(data);
+    });
 
-    fetch(apiUrl + '/api/coordinators')
-      .then(res => res.json())
-      .then(data => setCoordinators(data))
-      .catch(console.error);
+    safeFetchJson(apiUrl + '/api/highlights').then(data => {
+      if (data && Array.isArray(data)) setAlbums(data);
+    });
 
-    fetch(apiUrl + '/api/timeline')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const sorted = data.sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
-          setTimeline(sorted);
-        }
-      })
-      .catch(console.error);
+    safeFetchJson(apiUrl + '/api/coordinators').then(data => {
+      if (data && Array.isArray(data)) setCoordinators(data);
+    });
 
-    fetch(`${apiUrl}/api/public/problem-assignments`)
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setTeamAssignments(data);
-      })
-      .catch(console.error);
+    safeFetchJson(apiUrl + '/api/timeline').then(data => {
+      if (data && Array.isArray(data)) {
+        const sorted = data.sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+        setTimeline(sorted);
+      }
+    });
+
+    safeFetchJson(`${apiUrl}/api/public/problem-assignments`).then(data => {
+      if (data && Array.isArray(data)) setTeamAssignments(data);
+    });
   }, []);
 
   const handlePrintMasterPdf = () => {
