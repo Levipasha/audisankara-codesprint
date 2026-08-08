@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Calendar, MapPin, Award, Users, ShieldAlert, Sparkles, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Trophy, Clock, Cpu, BookOpen, Layers, Check, Ticket, Phone, FolderOpen, Image as ImageIcon, X, Star } from 'lucide-react';
+import { Calendar, MapPin, Award, Users, ShieldAlert, Sparkles, MessageSquare, ArrowRight, CheckCircle2, ChevronDown, Trophy, Clock, Cpu, BookOpen, Layers, Check, Ticket, Phone, FolderOpen, Image as ImageIcon, X, Star, FileText, Download } from 'lucide-react';
 
 const TOP_PRIZES = [
   {
@@ -123,6 +123,7 @@ export default function LandingPage() {
   const [teamAssignments, setTeamAssignments] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMasterModal, setShowMasterModal] = useState(false);
+  const [showProblemPdfModal, setShowProblemPdfModal] = useState(false);
   const [printingMasterPdf, setPrintingMasterPdf] = useState(false);
   const marqueeRef = useRef<HTMLDivElement>(null);
 
@@ -316,6 +317,14 @@ export default function LandingPage() {
               >
                 <span className="relative z-10">EXPLORE TEAMS</span>
               </Link>
+              <button
+                onClick={() => setShowProblemPdfModal(true)}
+                className="group relative px-6 py-3.5 bg-gradient-to-r from-purple-900 to-indigo-900 hover:from-purple-800 hover:to-indigo-800 text-white rounded-xl font-bold text-xs overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl flex items-center gap-2 cursor-pointer shadow-purple-900/30 border border-purple-700/50"
+              >
+                <FileText className="h-4 w-4 text-purple-300" />
+                <span className="relative z-10">PROBLEM STATEMENTS (PDF)</span>
+                <Download className="h-3.5 w-3.5 text-purple-300" />
+              </button>
             </div>
 
             {/* Event Quick Info Cards */}
@@ -691,19 +700,37 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
+              <a
+                href="/CodeSprint_2026_Problem_Statements.pdf"
+                download="CodeSprint_2026_Problem_Statements.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-amber-500/20 active:scale-95"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Download Problem Statements PDF</span>
+                <Download className="h-3.5 w-3.5" />
+              </a>
+              <button
+                onClick={() => setShowProblemPdfModal(true)}
+                className="px-5 py-3 bg-purple-900/80 hover:bg-purple-900 text-purple-200 font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-purple-700/60 shadow-md"
+              >
+                <FileText className="h-4 w-4 text-purple-300" />
+                <span>View Problem Statements PDF</span>
+              </button>
               <button
                 onClick={() => setShowMasterModal(true)}
-                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-700 shadow-md"
+                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-700 shadow-md"
               >
-                <FolderOpen className="h-4 w-4" />
-                Fullscreen Master Directory
+                <FolderOpen className="h-4 w-4 text-slate-400" />
+                <span>Master Team Directory</span>
               </button>
               <button
                 onClick={handlePrintMasterPdf}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer shadow-lg shadow-purple-600/25 active:scale-95"
+                className="px-5 py-3 bg-slate-800 hover:bg-slate-700 text-purple-300 font-black rounded-2xl text-xs transition-all flex items-center gap-2 cursor-pointer border border-slate-700 shadow-md active:scale-95"
               >
                 <FolderOpen className="h-4 w-4" />
-                Download / Print Master PDF
+                <span>Print Master PDF</span>
               </button>
             </div>
           </div>
@@ -1152,6 +1179,63 @@ export default function LandingPage() {
             alt="Fullscreen Snap" 
             className="max-w-full max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200" 
           />
+        </div>
+      )}
+
+      {/* Fullscreen Problem Statements PDF Catalog Viewer Modal */}
+      {showProblemPdfModal && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto no-print">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-6xl w-full h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-fadeIn">
+            {/* Header */}
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between gap-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <FileText className="h-5 w-5 text-amber-400" />
+                <div>
+                  <h3 className="font-extrabold text-sm text-white font-mono">
+                    CodeSprint 2026 Official Problem Statements Catalog (PDF)
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-mono">
+                    REF: CS2026/PDF/PROBLEMS (300 PROBLEM STATEMENTS)
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <a
+                  href="/CodeSprint_2026_Problem_Statements.pdf"
+                  download="CodeSprint_2026_Problem_Statements.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black rounded-xl text-xs flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Download className="h-4 w-4" />
+                  Download PDF File
+                </a>
+                <a
+                  href="/CodeSprint_2026_Problem_Statements.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs flex items-center gap-1 cursor-pointer border border-slate-700"
+                >
+                  Open in New Tab
+                </a>
+                <button
+                  onClick={() => setShowProblemPdfModal(false)}
+                  className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Embedded PDF Iframe */}
+            <div className="flex-1 bg-slate-100 p-2 sm:p-4 overflow-hidden">
+              <iframe
+                src="/CodeSprint_2026_Problem_Statements.pdf#toolbar=1"
+                className="w-full h-full rounded-2xl border border-slate-300 shadow-inner bg-white"
+                title="CodeSprint 2026 Problem Statements PDF Catalog"
+              />
+            </div>
+          </div>
         </div>
       )}
 

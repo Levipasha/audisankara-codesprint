@@ -99,6 +99,9 @@ export default function UserDashboard() {
           setPendingRequestTeam(null);
         } else {
           setTeamDetails(data);
+          if (data.problemSno) {
+            setProblemSnoInput(data.problemSno);
+          }
           setPendingRequestTeam(null);
         }
       }
@@ -158,6 +161,43 @@ export default function UserDashboard() {
   const [dashUtrLoading, setDashUtrLoading] = useState(false);
   const [dashUtrError, setDashUtrError] = useState('');
   const [dashUtrSuccess, setDashUtrSuccess] = useState(false);
+
+  // Problem Statement SNO states for Team Leader
+  const [problemSnoInput, setProblemSnoInput] = useState('');
+  const [problemSnoLoading, setProblemSnoLoading] = useState(false);
+  const [problemSnoMessage, setProblemSnoMessage] = useState({ text: '', type: '' });
+
+  const handleSaveProblemSno = async () => {
+    if (!problemSnoInput || !problemSnoInput.trim()) {
+      setProblemSnoMessage({ text: 'Please enter a Problem Statement Serial Number (SNO).', type: 'error' });
+      return;
+    }
+    setProblemSnoLoading(true);
+    setProblemSnoMessage({ text: '', type: '' });
+    try {
+      const res = await fetch((process.env.NEXT_PUBLIC_API_URL || '') + '/api/teams/update-problem-sno', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ problemSno: problemSnoInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setProblemSnoMessage({ text: data.message || 'Problem Statement SNO saved successfully!', type: 'success' });
+        addToast('Problem SNO Updated', data.message || 'Problem SNO saved successfully!', 'success');
+        fetchMyTeam();
+        fetchProblems();
+      } else {
+        setProblemSnoMessage({ text: data.message || 'Failed to update Problem Statement SNO.', type: 'error' });
+      }
+    } catch (err: any) {
+      setProblemSnoMessage({ text: err?.message || 'Error connecting to server.', type: 'error' });
+    } finally {
+      setProblemSnoLoading(false);
+    }
+  };
 
   // College editing states for Team Leader (One-time edit per member)
   const [editingCollegeMemberId, setEditingCollegeMemberId] = useState<string | null>(null);
@@ -1021,47 +1061,7 @@ export default function UserDashboard() {
               </div>
             )}
 
-            {/* Light Guidelines Download Box for Pending Participants */}
-            <div className="mt-5 p-4 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-rose-50/60 border border-amber-200/90 text-slate-800 text-center relative overflow-hidden shadow-sm">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-black text-amber-800 uppercase tracking-wide">
-                <Sparkles className="h-4 w-4 text-amber-600 animate-spin" style={{ animationDuration: '4s' }} />
-                <span>Hackathon Guidelines PDF</span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
-                Read official guidelines & rules for Audisankara University CodeSprint 2026.
-              </p>
-              <a
-                href="/hackathon-guidelines.pdf"
-                download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
-              >
-                <Download className="h-4 w-4 text-white" />
-                <span>Download Guidelines (PDF)</span>
-              </a>
-            </div>
 
-            {/* Light WhatsApp Group Box for Pending Participants */}
-            <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-green-50/60 border border-emerald-200/90 text-slate-800 text-center relative overflow-hidden shadow-sm">
-              <div className="flex items-center justify-center gap-1.5 text-xs font-black text-emerald-800 uppercase tracking-wide">
-                <MessageSquare className="h-4 w-4 text-emerald-600" />
-                <span>Official WhatsApp Group</span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
-                Join the CodeSprint 2026 WhatsApp community for live updates.
-              </p>
-              <a
-                href="https://chat.whatsapp.com/IA1BaLQ7gpu46RrbEz7mN7"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
-              >
-                <MessageSquare className="h-4 w-4 text-white" />
-                <span>Join WhatsApp Group</span>
-                <ExternalLink className="h-3.5 w-3.5 opacity-80" />
-              </a>
-            </div>
 
             {/* Logout link */}
             <div className="mt-6 text-center">
@@ -1217,61 +1217,7 @@ export default function UserDashboard() {
             E-Certificates
           </button>
 
-          {/* Light Guidelines Sidebar Card */}
-          <div className="mt-4 p-4 rounded-2xl bg-gradient-to-br from-amber-50/90 via-orange-50/70 to-rose-50/60 border border-amber-200/90 text-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="p-1.5 rounded-lg bg-amber-100/80 border border-amber-200/70">
-                <FileText className="h-4 w-4 text-amber-700" />
-              </span>
-              <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-800 flex items-center gap-1">
-                Must Read <Sparkles className="h-3 w-3 text-amber-500" />
-              </span>
-            </div>
-            <h4 className="text-xs font-black text-slate-900 leading-tight">
-              Hackathon Guidelines
-            </h4>
-            <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
-              Official rules & event details PDF for all participants.
-            </p>
-            <a
-              href="/hackathon-guidelines.pdf"
-              download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 w-full py-2.5 px-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <Download className="h-3.5 w-3.5 text-white" />
-              <span>Download PDF</span>
-            </a>
-          </div>
 
-          {/* Light WhatsApp Group Sidebar Card */}
-          <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-emerald-50/90 via-teal-50/70 to-green-50/60 border border-emerald-200/90 text-slate-800 shadow-sm hover:shadow-md transition-all relative overflow-hidden">
-            <div className="flex items-center gap-2 mb-1.5">
-              <span className="p-1.5 rounded-lg bg-emerald-100/80 border border-emerald-200/70">
-                <MessageSquare className="h-4 w-4 text-emerald-700" />
-              </span>
-              <span className="text-[10px] font-extrabold tracking-wider uppercase text-emerald-800 flex items-center gap-1">
-                WhatsApp Community <Sparkles className="h-3 w-3 text-emerald-500" />
-              </span>
-            </div>
-            <h4 className="text-xs font-black text-slate-900 leading-tight">
-              Official WhatsApp Group
-            </h4>
-            <p className="text-[11px] text-slate-600 mt-1 leading-snug font-medium">
-              Connect with fellow participants & get instant announcement alerts.
-            </p>
-            <a
-              href="https://chat.whatsapp.com/IA1BaLQ7gpu46RrbEz7mN7"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 w-full py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-            >
-              <MessageSquare className="h-3.5 w-3.5 text-white" />
-              <span>Join WhatsApp Group</span>
-              <ExternalLink className="h-3 w-3 opacity-80" />
-            </a>
-          </div>
         </aside>
 
         {/* Right Side Content Panel */}
@@ -1338,17 +1284,7 @@ export default function UserDashboard() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 shrink-0">
-                  {/* Clean Guidelines Download Button */}
-                  <a
-                    href="/hackathon-guidelines.pdf"
-                    download="CODESPRINT 2026 HACKATHON GUIDELINES - AUDISANKARA UNIVERSITY.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-extrabold rounded-xl text-xs flex items-center gap-2 shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
-                  >
-                    <Download className="h-4 w-4 text-white" />
-                    <span>Download Guidelines PDF</span>
-                  </a>
+
 
                   {user.paymentStatus === 'paid' ? (
                     <div className="flex-shrink-0 px-4 py-2.5 border border-emerald-200 bg-emerald-50 text-emerald-700 font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm">
@@ -1365,6 +1301,77 @@ export default function UserDashboard() {
                   )}
                 </div>
               </div>
+              {/* Problem Statement Serial Number (SNO) Input Card for Team Leader & Members */}
+              {teamDetails && (
+                <div className="bg-gradient-to-br from-purple-50 via-indigo-50/40 to-white border border-purple-200/90 rounded-2xl p-5 sm:p-6 shadow-sm space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center font-black text-base shadow-md shadow-purple-500/20 shrink-0">
+                        #
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                          Problem Statement Serial Number (SNO)
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          {user.id === teamDetails.leaderId || user.role === 'team-leader'
+                            ? 'Enter the serial number (SNO) of your chosen Problem Statement.'
+                            : 'Problem Statement Serial Number assigned to your team.'}
+                        </p>
+                      </div>
+                    </div>
+                    {teamDetails.problemSno && (
+                      <span className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-extrabold text-xs rounded-full shadow-sm flex items-center gap-1.5">
+                        Current SNO: #{teamDetails.problemSno}
+                      </span>
+                    )}
+                  </div>
+
+                  {user.id === teamDetails.leaderId || user.role === 'team-leader' ? (
+                    <div className="pt-1 space-y-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <input
+                          type="text"
+                          placeholder="Enter Problem Statement SNO (e.g. 1, 2, 3, PS-05...)"
+                          value={problemSnoInput}
+                          onChange={(e) => setProblemSnoInput(e.target.value)}
+                          className="flex-1 px-4 py-2.5 bg-white border border-purple-200 rounded-xl text-xs font-extrabold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+                        />
+                        <button
+                          onClick={handleSaveProblemSno}
+                          disabled={problemSnoLoading}
+                          className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-purple-500/20 transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0 active:scale-95 disabled:opacity-50"
+                        >
+                          {problemSnoLoading ? (
+                            <>
+                              <Loader className="h-4 w-4 animate-spin" />
+                              Saving SNO...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-4 w-4" />
+                              Save Problem SNO
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {problemSnoMessage.text && (
+                        <p className={`text-xs font-bold mt-2 ${problemSnoMessage.type === 'success' ? 'text-emerald-600' : 'text-rose-500'}`}>
+                          {problemSnoMessage.text}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-xs font-medium text-slate-700 bg-white/90 border border-purple-100 p-3 rounded-xl">
+                      {teamDetails.problemSno ? (
+                        <span>Assigned Problem Statement SNO: <strong className="text-purple-700 font-extrabold text-sm">#{teamDetails.problemSno}</strong></span>
+                      ) : (
+                        <span className="text-slate-400 italic">Your Group Leader has not entered a Problem Statement SNO yet.</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Assigned Problem Statements */}
               {problems.length > 0 && (
