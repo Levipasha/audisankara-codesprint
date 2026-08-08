@@ -120,36 +120,40 @@ export default function LandingPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [coordinators, setCoordinators] = useState<any[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const marqueeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/guests')
-      .then(res => res.json())
-      .then(data => setGuests(data))
-      .catch(console.error);
-
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/highlights')
-      .then(res => res.json())
-      .then(data => setAlbums(data))
-      .catch(console.error);
-
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/timeline')
-      .then(res => res.json())
-      .then(data => setTimeline(data))
-      .catch(console.error);
-      
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/coordinators')
-      .then(res => res.json())
-      .then(data => setCoordinators(data))
-      .catch(console.error);
-
   const [teamAssignments, setTeamAssignments] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMasterModal, setShowMasterModal] = useState(false);
   const [printingMasterPdf, setPrintingMasterPdf] = useState(false);
+  const marqueeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+    fetch(apiUrl + '/api/guests')
+      .then(res => res.json())
+      .then(data => setGuests(data))
+      .catch(console.error);
+
+    fetch(apiUrl + '/api/highlights')
+      .then(res => res.json())
+      .then(data => setAlbums(data))
+      .catch(console.error);
+
+    fetch(apiUrl + '/api/coordinators')
+      .then(res => res.json())
+      .then(data => setCoordinators(data))
+      .catch(console.error);
+
+    fetch(apiUrl + '/api/timeline')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const sorted = data.sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
+          setTimeline(sorted);
+        }
+      })
+      .catch(console.error);
+
     fetch(`${apiUrl}/api/public/problem-assignments`)
       .then(res => res.json())
       .then(data => {
@@ -167,20 +171,6 @@ export default function LandingPage() {
       }, 1000);
     }, 200);
   };
-
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/highlights')
-      .then(res => res.json())
-      .then(data => setAlbums(data))
-      .catch(console.error);
-
-    fetch(process.env.NEXT_PUBLIC_API_URL + '/api/timeline')
-      .then(res => res.json())
-      .then(data => {
-        const sorted = data.sort((a: any, b: any) => new Date(`${a.date}T${a.time}`).getTime() - new Date(`${b.date}T${b.time}`).getTime());
-        setTimeline(sorted);
-      })
-      .catch(console.error);
-  }, []);
 
   useEffect(() => {
     const marqueeContainer = marqueeRef.current;
